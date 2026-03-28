@@ -1,0 +1,333 @@
+# Release: multi-platform builds (cross for Linux ARM64), GitHub Release + SHA256 checksums,
+# crates.io publish, and npm platform packages.
+#
+# Required repository secrets:
+#   CARGO_REGISTRY_TOKEN — crates.io API token with publish scope
+#   NPM_TOKEN            — npm automation token with publish access
+#
+# Trigger: push a tag v* (e.g. v0.1.0). [workspace.package].version in Cargo.toml must match
+# the tag without the leading v.
+#
+# npm layout (required before first release): npm/create-grafana-plugin/ and npm/<platform>/
+# with package.json — see project design docs.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Validate (lint + test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo registry and build
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-validate
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Run tests
+        run: cargo test --workspace
+
+  build:
+    name: Build (${{ matrix.npm_platform }})
+    needs: [validate]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            npm_platform: darwin-arm64
+            binary_name: create-grafana-plugin
+            use_cross: false
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            npm_platform: darwin-x64
+            binary_name: create-grafana-plugin
+            use_cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            npm_platform: linux-x64
+            binary_name: create-grafana-plugin
+            use_cross: false
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            npm_platform: linux-arm64
+            binary_name: create-grafana-plugin
+            use_cross: true
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            npm_platform: win32-x64
+            binary_name: create-grafana-plugin.exe
+            use_cross: false
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry and build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          shared-key: release-build
+
+      - name: Install compilation target
+        if: ${{ !matrix.use_cross }}
+        run: rustup target add "${{ matrix.target }}"
+
+      - name: Install cross (Linux ARM64)
+        if: matrix.use_cross
+        run: |
+          set -euo pipefail
+          cargo install cross --git https://github.com/cross-rs/cross --locked
+
+      - name: Build release binary (native)
+        if: ${{ !matrix.use_cross }}
+        run: |
+          set -euo pipefail
+          cargo build --release --locked --target "${{ matrix.target }}"
+
+      - name: Build release binary (cross)
+        if: matrix.use_cross
+        run: |
+          set -euo pipefail
+          cross build --release --locked --target "${{ matrix.target }}"
+
+      - name: Stage artifact for upload
+        id: stage
+        run: |
+          set -euo pipefail
+          BINARY_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          if [[ ! -f "$BINARY_PATH" ]]; then
+            echo "Expected binary not found: $BINARY_PATH" >&2
+            exit 1
+          fi
+          mkdir -p upload
+          DEST="upload/create-grafana-plugin-${{ matrix.npm_platform }}"
+          if [[ "${{ matrix.binary_name }}" == *.exe ]]; then
+            DEST="${DEST}.exe"
+          fi
+          cp "$BINARY_PATH" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.npm_platform }}
+          path: ${{ steps.stage.outputs.path }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish (crates.io, npm, GitHub Release)
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require publish secrets
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${CARGO_REGISTRY_TOKEN:?Missing secret CARGO_REGISTRY_TOKEN}"
+          : "${NPM_TOKEN:?Missing secret NPM_TOKEN}"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Extract release version from tag
+        id: version
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "$TAG" != v* ]]; then
+            echo "Tag must start with v, got: $TAG" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing version: $VERSION"
+
+      - name: Verify Cargo workspace version matches tag
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          ACTUAL="$(cargo metadata --no-deps --format-version 1 | python3 -c "import json,sys; d=json.load(sys.stdin); print(next(p['version'] for p in d['packages'] if p['name']=='create-grafana-plugin'))")"
+          if [[ "$ACTUAL" != "$EXPECTED_VERSION" ]]; then
+            echo "Cargo.toml workspace package version ($ACTUAL) does not match tag ($EXPECTED_VERSION)." >&2
+            echo "Bump [workspace.package] version in Cargo.toml before tagging." >&2
+            exit 1
+          fi
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded
+          pattern: binary-*
+          merge-multiple: true
+
+      - name: Prepare release assets and SHA256 checksums
+        id: checksums
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          shopt -s nullglob
+          files=(downloaded/*)
+          if [[ ${#files[@]} -eq 0 ]] || [[ ! -f "${files[0]}" ]]; then
+            echo "No binaries found in downloaded artifacts." >&2
+            ls -la downloaded || true
+            exit 1
+          fi
+          for f in "${files[@]}"; do
+            [[ -f "$f" ]] || continue
+            base="$(basename "$f")"
+            cp -f "$f" "release-assets/$base"
+          done
+          (
+            cd release-assets
+            sha256sum -- * > SHA256SUMS
+          )
+          echo "sha256_path=release-assets/SHA256SUMS" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: |
+            ## create-grafana-plugin ${{ steps.version.outputs.version }}
+
+            Prebuilt binaries and SHA256SUMS are attached.
+
+            **Install**
+            - **crates.io:** `cargo install create-grafana-plugin --version ${{ steps.version.outputs.version }}`
+            - **npm:** `npx create-grafana-plugin@${{ steps.version.outputs.version }}`
+          files: |
+            release-assets/SHA256SUMS
+            release-assets/create-grafana-plugin-*
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish crate to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          cargo publish -p create-grafana-plugin --locked
+
+      - name: Copy binaries into npm platform packages
+        run: |
+          set -euo pipefail
+          copy_one() {
+            local npm_platform="$1"
+            local src_suffix="$2"
+            local dest_name="$3"
+            local src="downloaded/create-grafana-plugin-${npm_platform}${src_suffix}"
+            local dest_dir="npm/${npm_platform}/bin"
+            if [[ ! -f "$src" ]]; then
+              echo "Missing artifact: $src" >&2
+              ls -la downloaded || true
+              exit 1
+            fi
+            mkdir -p "$dest_dir"
+            cp -f "$src" "${dest_dir}/${dest_name}"
+            chmod +x "${dest_dir}/${dest_name}" 2>/dev/null || true
+          }
+          copy_one darwin-arm64 "" create-grafana-plugin
+          copy_one darwin-x64 "" create-grafana-plugin
+          copy_one linux-x64 "" create-grafana-plugin
+          copy_one linux-arm64 "" create-grafana-plugin
+          copy_one win32-x64 .exe create-grafana-plugin.exe
+
+      - name: Apply version to npm package.json files
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          for dir in npm/darwin-arm64 npm/darwin-x64 npm/linux-x64 npm/linux-arm64 npm/win32-x64 npm/create-grafana-plugin; do
+            npm version "$RELEASE_VERSION" --no-git-tag-version --prefix "$dir"
+          done
+
+      - name: Sync optionalDependencies in meta package
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("fs");
+          const v = process.env.RELEASE_VERSION;
+          if (!v) {
+            throw new Error("RELEASE_VERSION is unset");
+          }
+          const p = "npm/create-grafana-plugin/package.json";
+          const j = JSON.parse(fs.readFileSync(p, "utf8"));
+          const opt = j.optionalDependencies;
+          if (opt) {
+            for (const k of Object.keys(opt)) {
+              opt[k] = v;
+            }
+          }
+          fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");
+          NODE
+
+      - name: Publish npm platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          for dir in npm/darwin-arm64 npm/darwin-x64 npm/linux-x64 npm/linux-arm64 npm/win32-x64; do
+            npm publish --access public --prefix "$dir"
+          done
+
+      - name: Publish npm meta package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          npm publish --access public --prefix npm/create-grafana-plugin
