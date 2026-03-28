@@ -1,0 +1,34 @@
+{
+  "name": "create-grafana-plugin",
+  "version": "0.1.0",
+  "description": "CLI tool to scaffold production-ready Grafana plugin projects with Vite, bun, Vitest, optional Rust WASM, Docker dev environment, and mock data generator.",
+  "author": "andeya <andeyalee@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andeya/create-grafana-plugin"
+  },
+  "keywords": [
+    "grafana",
+    "plugin",
+    "scaffold",
+    "create",
+    "vite",
+    "wasm",
+    "rust",
+    "cli"
+  ],
+  "bin": {
+    "create-grafana-plugin": "npm/create-grafana-plugin/bin/index.js"
+  },
+  "scripts": {
+    "fmt": "cargo fmt --all",
+    "lint": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "test": "cargo test --workspace",
+    "verify": "npm run lint && npm run test",
+    "bump": "node scripts/bump-version.mjs",
+    "bump:patch": "node scripts/bump-version.mjs patch",
+    "bump:minor": "node scripts/bump-version.mjs minor",
+    "bump:major": "node scripts/bump-version.mjs major"
+  }
+}
