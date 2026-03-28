@@ -1,0 +1,50 @@
+<!-- @managed by create-grafana-plugin — do not edit -->
+
+# {% for word in plugin_name | split(pat='-') %}{{ word | capitalize }}{% if not loop.last %} {% endif %}{% endfor %}
+
+{{ plugin_description }}
+
+## Development
+
+```bash
+{{ package_manager }} install
+{{ package_manager }} run dev
+```
+
+{% if has_wasm %}
+Build the Rust WASM crate:
+
+```bash
+{{ package_manager }} run build:wasm
+```
+
+{% endif %}
+## Build
+
+```bash
+{{ package_manager }} run build
+```
+
+The packaged plugin is emitted under `dist/{{ plugin_id }}/`.
+
+## Verify
+
+```bash
+{{ package_manager }} run verify
+```
+
+{% if has_docker %}
+## Docker
+
+When Docker support is enabled, use the generated compose file for local Grafana development.
+
+{% endif %}
+{% if has_mock %}
+## Mock data
+
+When mock data generation is enabled, refer to the generated mock tooling in this repository.
+
+{% endif %}
+## License
+
+Copyright © {{ current_year }} {{ author }}. All rights reserved.

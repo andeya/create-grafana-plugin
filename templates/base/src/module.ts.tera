@@ -1,0 +1,58 @@
+// @managed by create-grafana-plugin — do not edit
+{% if plugin_type == "panel" %}
+import React from 'react';
+import { PanelPlugin, type PanelProps } from '@grafana/data';
+
+function {{ pascal_case_name }}Panel(_props: PanelProps): React.ReactElement {
+  return (
+    <div className="panel-empty-state">
+      <p>{{ plugin_description }}</p>
+    </div>
+  );
+}
+
+export const plugin = new PanelPlugin({{ pascal_case_name }}Panel);
+{% elif plugin_type == "datasource" %}
+import {
+  DataSourcePlugin,
+  DataSourceApi,
+  type DataQueryRequest,
+  type DataQueryResponse,
+  type DataSourceInstanceSettings,
+} from '@grafana/data';
+import type { {{ pascal_case_name }}JsonData, {{ pascal_case_name }}Query } from './types';
+
+class {{ pascal_case_name }}DataSource extends DataSourceApi<
+  {{ pascal_case_name }}Query,
+  {{ pascal_case_name }}JsonData
+> {
+  constructor(instanceSettings: DataSourceInstanceSettings) {
+    super(instanceSettings);
+  }
+
+  query(request: DataQueryRequest<{{ pascal_case_name }}Query>): Promise<DataQueryResponse> {
+    void request;
+    return Promise.resolve({ data: [] });
+  }
+
+  async testDatasource(): Promise<{ status: string; message: string }> {
+    return { status: 'success', message: 'Data source is working' };
+  }
+}
+
+export const plugin = new DataSourcePlugin({{ pascal_case_name }}DataSource);
+{% else %}
+import React from 'react';
+import { AppPlugin } from '@grafana/data';
+import type { AppRootProps } from '@grafana/data';
+
+function {{ pascal_case_name }}RootPage(_props: AppRootProps): React.ReactElement {
+  return (
+    <div>
+      <p>{{ plugin_description }}</p>
+    </div>
+  );
+}
+
+export const plugin = new AppPlugin<{}>().setRootPage({{ pascal_case_name }}RootPage);
+{% endif %}

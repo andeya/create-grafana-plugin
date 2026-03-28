@@ -1,0 +1,70 @@
+<!-- @managed by create-grafana-plugin — do not edit -->
+
+# AI Coding Standards
+
+This file defines coding standards for AI assistants working on this project.
+It is the single source of truth — IDE-specific config files should reference this.
+
+## Project Context
+
+- **Project**: {% for word in plugin_name | split(pat='-') %}{{ word | capitalize }}{% if not loop.last %} {% endif %}{% endfor %} — {{ plugin_description }}
+- **Architecture**: React 18 (TypeScript) frontend{% if has_wasm %} + Rust WASM{% endif %} Grafana {{ plugin_type }} plugin{% if has_docker %} — Docker dev environment included{% endif %}{% if has_mock %} — mock data tooling included{% endif %}
+- **Build**: Vite 5 (AMD output), {{ package_manager }}{% if has_wasm %}, wasm-pack (Rust→WASM){% endif %}
+- **Test**: Vitest (frontend){% if has_wasm %}, cargo test (Rust){% endif %}
+
+## Language & Style
+
+- Git commit messages: **English**
+- Code comments: **English**
+- User-facing documentation: match your team’s language policy
+- Comments explain *why*, not *what* — never restate the code
+
+## Verification Before Commit
+
+**CRITICAL**: Before producing a commit, run the full verification pipeline:
+
+```bash
+{{ package_manager }} run verify
+```
+
+If any check fails, fix the issue before committing. Never skip verification.
+
+## Pre-Commit Self-Check
+
+1. Are all new public APIs documented with JSDoc{% if has_wasm %} / rustdoc{% endif %}?
+2. Are types used correctly (no `any` in TS{% if has_wasm %}, no `.unwrap()` in Rust library code{% endif %})?
+3. Are error paths handled (not swallowed silently)?
+4. Is the change minimal and focused on the task?
+
+## TypeScript Rules
+
+- **Never** use `any` — use `unknown` and type guards instead
+- **Never** use `@ts-ignore` or `@ts-expect-error` without a justification comment
+- All public functions and components **must** have explicit return types
+- Prefer `interface` over `type` for object shapes
+- Use `readonly` for properties that should not be mutated
+- React components: use `React.FC<Props>` with explicit props interface
+- Prefer named exports over default exports
+- Consistent naming: `camelCase` for variables/functions, `PascalCase` for types/components
+
+{% if has_wasm %}
+## Rust Rules
+
+- **Never** use `.unwrap()` in library code — use `Result` and `?` operator
+- Every `unsafe` block **must** have a `// SAFETY:` comment explaining why it's sound
+- Run `cargo clippy --workspace -- -D warnings` — zero warnings tolerance
+- Run `cargo fmt` before commit — formatting is non-negotiable
+- All public items **must** have `///` doc comments
+
+{% endif %}
+## Testing
+
+- Every new feature **should** have at least one test
+- Test names describe the expected behavior
+
+## Error Handling
+
+TypeScript: use try/catch with typed error responses, never swallow errors.
+{% if has_wasm %}
+Rust: propagate with `Result` and `?`, add context with `.map_err()`.
+{% endif %}

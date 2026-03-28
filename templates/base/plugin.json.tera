@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "{{ plugin_type }}",
+  "name": "{% for word in plugin_name | split(pat='-') %}{{ word | capitalize }}{% if not loop.last %} {% endif %}{% endfor %}",
+  "id": "{{ plugin_id }}",
+  "state": "alpha",
+  "info": {
+    "description": {{ plugin_description | json_encode }},
+    "author": {
+      "name": {{ author | json_encode }},
+      "url": "https://github.com/{{ org }}"
+    },
+    "keywords": [
+      "grafana",
+      "{{ plugin_type }}",
+      "{{ plugin_name }}"
+    ],
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      {
+        "name": "repository",
+        "url": "https://github.com/{{ org }}/{{ plugin_name }}"
+      }
+    ],
+    "screenshots": [],
+    "version": "1.0.0",
+    "updated": "{{ today }}"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=10.0.0"
+  }
+}

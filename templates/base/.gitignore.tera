@@ -1,0 +1,24 @@
+# @managed by create-grafana-plugin — do not edit
+node_modules/
+package-lock.json
+{% if package_manager == "bun" %}bun.lock{% endif %}
+
+{% if has_wasm %}/target/
+{{ crate_name }}/target/
+{{ crate_name }}/pkg/
+{% endif %}
+/dist/
+
+.idea/
+.vscode/
+.cursor/
+*.sublime-project
+*.sublime-workspace
+
+coverage/
+.eslintcache
+.env
+.env.*
+.DS_Store
+Thumbs.db
+*.log
