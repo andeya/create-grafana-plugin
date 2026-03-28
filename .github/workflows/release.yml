@@ -248,7 +248,14 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
-          cargo publish -p create-grafana-plugin --locked
+          if ! cargo publish -p create-grafana-plugin --locked 2>&1; then
+            if cargo search create-grafana-plugin --limit 1 | grep -q "create-grafana-plugin"; then
+              echo "::warning::Crate version already published to crates.io, skipping."
+            else
+              echo "Failed to publish crate" >&2
+              exit 1
+            fi
+          fi
 
       - name: Copy binaries into npm platform packages
         run: |
