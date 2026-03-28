@@ -1,0 +1,25 @@
+// @managed by create-grafana-plugin — do not edit
+import React from 'react';
+import { InlineField, Input } from '@grafana/ui';
+
+interface Props {
+  query: { queryText?: string; refId: string };
+  onChange: (query: { queryText?: string; refId: string }) => void;
+  onRunQuery: () => void;
+}
+
+export const QueryEditor: React.FC<Props> = ({ query, onChange, onRunQuery }) => {
+  return (
+    <div>
+      <InlineField label="Query" labelWidth={12}>
+        <Input
+          value={query.queryText || ''}
+          onChange={(e) => onChange({ ...query, queryText: e.currentTarget.value })}
+          onBlur={onRunQuery}
+          placeholder="Enter query"
+          width={60}
+        />
+      </InlineField>
+    </div>
+  );
+};

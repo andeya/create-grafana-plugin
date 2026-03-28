@@ -1,0 +1,26 @@
+// @managed by create-grafana-plugin — do not edit
+import {
+  DataSourceApi,
+  type DataQueryRequest,
+  type DataQueryResponse,
+  type DataSourceInstanceSettings,
+} from '@grafana/data';
+import type { {{ pascal_case_name }}Query, {{ pascal_case_name }}JsonData } from './types';
+
+export class {{ pascal_case_name }}DataSource extends DataSourceApi<
+  {{ pascal_case_name }}Query,
+  {{ pascal_case_name }}JsonData
+> {
+  constructor(instanceSettings: DataSourceInstanceSettings<{{ pascal_case_name }}JsonData>) {
+    super(instanceSettings);
+  }
+
+  async query(request: DataQueryRequest<{{ pascal_case_name }}Query>): Promise<DataQueryResponse> {
+    void request;
+    return { data: [] };
+  }
+
+  async testDatasource(): Promise<{ status: string; message: string }> {
+    return { status: 'success', message: 'Data source is working' };
+  }
+}

@@ -1,0 +1,17 @@
+// @managed by create-grafana-plugin — do not edit
+import React from 'react';
+import { Button } from '@grafana/ui';
+import type { AppPluginMeta, PluginConfigPageProps } from '@grafana/data';
+
+interface Props extends PluginConfigPageProps<AppPluginMeta> {}
+
+export const AppConfig: React.FC<Props> = ({ plugin }) => {
+  return (
+    <div>
+      <h3>{{ pascal_case_name }} Configuration</h3>
+      <p>Plugin ID: {{ plugin_id }}</p>
+      <p>Version: {plugin.meta.info.version}</p>
+      <Button>Save</Button>
+    </div>
+  );
+};

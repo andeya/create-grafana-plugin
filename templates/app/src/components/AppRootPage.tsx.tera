@@ -1,0 +1,11 @@
+// @managed by create-grafana-plugin — do not edit
+import React from 'react';
+
+export const AppRootPage: React.FC = () => {
+  return (
+    <div>
+      <h1>{{ pascal_case_name }}</h1>
+      <p>{{ plugin_description }}</p>
+    </div>
+  );
+};

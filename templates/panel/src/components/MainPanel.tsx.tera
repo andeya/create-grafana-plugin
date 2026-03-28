@@ -1,0 +1,21 @@
+// @managed by create-grafana-plugin — do not edit
+import React from 'react';
+import type { PanelProps } from '@grafana/data';
+{% if has_wasm %}import { getWasmStatus } from '../services/wasm-bridge';{% endif %}
+
+interface Props extends PanelProps<{}> {}
+
+export const {{ pascal_case_name }}Panel: React.FC<Props> = ({ data, width, height }) => {
+  return (
+    <div style={% raw %}{{ width, height, overflow: 'auto', padding: 8 }}{% endraw %}>
+      <h3>{{ pascal_case_name }}</h3>
+{% if has_wasm %}      <p>WASM: {getWasmStatus()}</p>{% endif %}
+      <p>{{ plugin_description }}</p>
+      {data.series.length === 0 ? (
+        <p>No data available. Configure data sources and time range.</p>
+      ) : (
+        <p>Received {data.series.length} series.</p>
+      )}
+    </div>
+  );
+};

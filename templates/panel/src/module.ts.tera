@@ -1,0 +1,5 @@
+// @managed by create-grafana-plugin — do not edit
+import { PanelPlugin } from '@grafana/data';
+import { {{ pascal_case_name }}Panel } from './components/MainPanel';
+
+export const plugin = new PanelPlugin({{ pascal_case_name }}Panel);

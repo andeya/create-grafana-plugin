@@ -1,0 +1,13 @@
+// @managed by create-grafana-plugin — do not edit
+import { AppPlugin } from '@grafana/data';
+import { AppConfig } from './components/AppConfig';
+import { AppRootPage } from './components/AppRootPage';
+
+export const plugin = new AppPlugin()
+  .setRootPage(AppRootPage)
+  .addConfigPage({
+    title: 'Configuration',
+    icon: 'cog',
+    body: AppConfig,
+    id: 'configuration',
+  });

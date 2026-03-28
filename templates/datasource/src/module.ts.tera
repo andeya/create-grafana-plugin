@@ -1,0 +1,9 @@
+// @managed by create-grafana-plugin — do not edit
+import { DataSourcePlugin } from '@grafana/data';
+import { {{ pascal_case_name }}DataSource } from './datasource';
+import { ConfigEditor } from './components/ConfigEditor';
+import { QueryEditor } from './components/QueryEditor';
+
+export const plugin = new DataSourcePlugin({{ pascal_case_name }}DataSource)
+  .setConfigEditor(ConfigEditor)
+  .setQueryEditor(QueryEditor);
