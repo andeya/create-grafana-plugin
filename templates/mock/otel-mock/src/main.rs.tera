@@ -1,0 +1,16 @@
+// @managed by create-grafana-plugin — do not edit
+//! Mock telemetry data generator for {{ plugin_name }}.
+//! Generates synthetic metrics, traces, and logs for local development.
+
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::init();
+    tracing::info!("otel-mock started for {{ plugin_name }}");
+
+    loop {
+        tracing::info!("Generating mock data tick");
+        tokio::time::sleep(Duration::from_secs(5)).await;
+    }
+}

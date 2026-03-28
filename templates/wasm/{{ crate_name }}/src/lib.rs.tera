@@ -1,0 +1,21 @@
+// @managed by create-grafana-plugin — do not edit
+//! {{ pascal_case_name }} WASM analysis engine.
+
+use wasm_bindgen::prelude::*;
+
+/// Greet function for WASM verification.
+#[wasm_bindgen]
+pub fn greet() -> String {
+    format!("Hello from {} WASM!", "{{ plugin_name }}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn greet_works() {
+        let result = greet();
+        assert!(result.contains("{{ plugin_name }}"));
+    }
+}

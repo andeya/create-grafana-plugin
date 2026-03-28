@@ -1,0 +1,12 @@
+# @managed by create-grafana-plugin — do not edit
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+{% if has_mock %}  - job_name: otel-mock
+    static_configs:
+      - targets: ['otel-mock:9464']
+{% endif %}

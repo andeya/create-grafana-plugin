@@ -1,0 +1,77 @@
+# @managed by create-grafana-plugin — do not edit
+services:
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS={{ plugin_id }}
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_LOG_LEVEL=debug
+    volumes:
+      - ./dist/{{ plugin_id }}:/var/lib/grafana/plugins/{{ plugin_id }}
+      - ./provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+
+{% if has_mock %}  otel-mock:
+    build:
+      context: .
+      dockerfile: otel-mock/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      LOKI_URL: http://loki:3100
+      OTEL_MOCK_PROM_ADDR: 0.0.0.0:9464
+      OTEL_MOCK_TICK_MS: "5000"
+      RUST_LOG: info
+    ports:
+      - "9464:9464"
+    depends_on:
+      - tempo
+      - loki
+{% endif %}
+  prometheus:
+    image: prom/prometheus:latest
+    user: "nobody"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./provisioning/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --storage.tsdb.path=/prometheus
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    user: root
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+    volumes:
+      - ./provisioning/tempo/tempo.yml:/etc/tempo/tempo.yml
+      - tempo-data:/var/lib/tempo
+    command:
+      - -config.file=/etc/tempo/tempo.yml
+
+  loki:
+    image: grafana/loki:latest
+    user: root
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./provisioning/loki/config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+
+volumes:
+  grafana-data:
+  prometheus-data:
+  tempo-data:
+  loki-data:

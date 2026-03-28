@@ -1,0 +1,15 @@
+# @managed by create-grafana-plugin — do not edit
+[package]
+name = "otel-mock"
+version = "1.0.0"
+edition = "2021"
+authors = ["{{ author }}"]
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.8"
+tracing = "0.1"
+tracing-subscriber = "0.3"

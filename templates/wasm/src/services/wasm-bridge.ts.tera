@@ -1,0 +1,39 @@
+// @managed by create-grafana-plugin — do not edit
+import { wasmBase64, wasmMode } from 'virtual:{{ crate_name }}-wasm';
+import initWasm, { initSync, greet } from '../../{{ crate_name }}/pkg/{{ crate_name }}';
+
+let initialized = false;
+
+function decodeBase64(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+export function initializeWasm(): void {
+  if (initialized) return;
+  if (wasmMode === 'inline' && wasmBase64) {
+    initSync({ module: decodeBase64(wasmBase64) });
+    initialized = true;
+  }
+}
+
+export async function initializeWasmAsync(): Promise<void> {
+  if (initialized) return;
+  if (wasmMode === 'external') {
+    await initWasm();
+    initialized = true;
+  }
+}
+
+export function getWasmStatus(): string {
+  if (initialized) return `Ready (${wasmMode})`;
+  return wasmMode === 'unavailable' ? 'Unavailable' : 'Not initialized';
+}
+
+export function isWasmReady(): boolean {
+  return initialized;
+}
