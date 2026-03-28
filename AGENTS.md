@@ -1,0 +1,45 @@
+# AI Coding Standards
+
+This file defines coding standards for AI assistants working on this project.
+
+## Project Context
+
+- **Project**: create-grafana-plugin — CLI scaffolding tool for Grafana plugins
+- **Language**: Rust (CLI core)
+- **Build**: Cargo workspace
+- **Test**: cargo test
+
+## Language & Style
+
+- Git commit messages: **English**
+- Code comments: **English**
+- User-facing documentation: **Chinese (Simplified)** unless otherwise specified
+- Comments explain *why*, not *what*
+
+## Verification
+
+```bash
+cargo clippy --workspace -- -D warnings
+cargo fmt --all -- --check
+cargo test --workspace
+```
+
+## Version bumps
+
+Keep `[workspace.package].version` in `Cargo.toml` in sync with every `package.json` (root and `npm/*`), including `optionalDependencies` in `npm/create-grafana-plugin`.
+
+```bash
+npm run bump:patch   # or bump:minor / bump:major
+cargo build          # refresh Cargo.lock after version change
+```
+
+Then commit, tag `vX.Y.Z`, and push the tag to trigger the release workflow.
+
+## Rust Rules
+
+- Never use `.unwrap()` in library code — use `Result` and `?`
+- Every `unsafe` has a `// SAFETY:` comment
+- `cargo clippy -- -D warnings` zero tolerance
+- `cargo fmt` before commit
+- All public items have `///` doc comments
+- Prefer `pub(crate)` over `pub` when not part of public API
