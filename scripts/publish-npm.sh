@@ -189,7 +189,7 @@ main() {
 
   local suffix
   for suffix in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
-    printf '\n%s\n' "==> Publishing @create-grafana-plugin/${suffix}"
+    printf '\n%s\n' "==> Publishing @andeya/create-grafana-plugin-${suffix}"
     npm_publish_dir "${ROOT_DIR}/npm/${suffix}"
   done
 

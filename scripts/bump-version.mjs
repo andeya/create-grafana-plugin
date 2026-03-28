@@ -30,11 +30,11 @@ const NPM_PACKAGES = [
 ];
 
 const PLATFORM_SCOPES = [
-  "@create-grafana-plugin/darwin-arm64",
-  "@create-grafana-plugin/darwin-x64",
-  "@create-grafana-plugin/linux-x64",
-  "@create-grafana-plugin/linux-arm64",
-  "@create-grafana-plugin/win32-x64",
+  "@andeya/create-grafana-plugin-darwin-arm64",
+  "@andeya/create-grafana-plugin-darwin-x64",
+  "@andeya/create-grafana-plugin-linux-x64",
+  "@andeya/create-grafana-plugin-linux-arm64",
+  "@andeya/create-grafana-plugin-win32-x64",
 ];
 
 const INCREMENTS = ["major", "minor", "patch"];

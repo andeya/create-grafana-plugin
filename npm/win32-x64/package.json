@@ -1,5 +1,5 @@
 {
-  "name": "@create-grafana-plugin/win32-x64",
+  "name": "@andeya/create-grafana-plugin-win32-x64",
   "version": "0.1.0",
   "description": "Prebuilt create-grafana-plugin binary for Windows (x86_64)",
   "license": "MIT",

@@ -15,19 +15,19 @@ function platformPackageName() {
   const platform = process.platform;
   const arch = process.arch;
   if (platform === "darwin" && arch === "arm64") {
-    return "@create-grafana-plugin/darwin-arm64";
+    return "@andeya/create-grafana-plugin-darwin-arm64";
   }
   if (platform === "darwin" && arch === "x64") {
-    return "@create-grafana-plugin/darwin-x64";
+    return "@andeya/create-grafana-plugin-darwin-x64";
   }
   if (platform === "linux" && arch === "x64") {
-    return "@create-grafana-plugin/linux-x64";
+    return "@andeya/create-grafana-plugin-linux-x64";
   }
   if (platform === "linux" && arch === "arm64") {
-    return "@create-grafana-plugin/linux-arm64";
+    return "@andeya/create-grafana-plugin-linux-arm64";
   }
   if (platform === "win32" && arch === "x64") {
-    return "@create-grafana-plugin/win32-x64";
+    return "@andeya/create-grafana-plugin-win32-x64";
   }
   return null;
 }

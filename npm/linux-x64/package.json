@@ -1,5 +1,5 @@
 {
-  "name": "@create-grafana-plugin/linux-x64",
+  "name": "@andeya/create-grafana-plugin-linux-x64",
   "version": "0.1.0",
   "description": "Prebuilt create-grafana-plugin binary for Linux (x86_64)",
   "license": "MIT",
