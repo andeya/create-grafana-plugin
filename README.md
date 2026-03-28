@@ -2,6 +2,8 @@
 
 **Scaffold production-ready Grafana plugin projects** — Vite-based frontend, optional Rust WASM, Docker development stack, mock data tooling, and your choice of JavaScript package manager. Includes an `update` command to align existing projects with the latest template.
 
+**English** · [中文](README_zh.md)
+
 ## Features
 
 - **Plugin types**: Panel, data source, and app plugins — choose the integration shape that fits Grafana’s plugin model.
