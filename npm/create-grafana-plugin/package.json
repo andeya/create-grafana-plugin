@@ -17,6 +17,9 @@
     "rust",
     "cli"
   ],
+  "files": [
+    "bin"
+  ],
   "bin": {
     "create-grafana-plugin": "bin/index.js"
   },

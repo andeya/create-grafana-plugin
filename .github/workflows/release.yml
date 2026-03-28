@@ -318,7 +318,7 @@ jobs:
         run: |
           set -euo pipefail
           for dir in npm/darwin-arm64 npm/darwin-x64 npm/linux-x64 npm/linux-arm64 npm/win32-x64; do
-            npm publish --access public --prefix "$dir"
+            (cd "$dir" && npm publish --access public)
           done
 
       - name: Publish npm meta package
@@ -326,4 +326,4 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          npm publish --access public --prefix npm/create-grafana-plugin
+          cd npm/create-grafana-plugin && npm publish --access public
