@@ -291,7 +291,7 @@ jobs:
         run: |
           set -euo pipefail
           for dir in npm/darwin-arm64 npm/darwin-x64 npm/linux-x64 npm/linux-arm64 npm/win32-x64 npm/create-grafana-plugin; do
-            npm version "$RELEASE_VERSION" --no-git-tag-version --prefix "$dir"
+            npm version "$RELEASE_VERSION" --no-git-tag-version --allow-same-version --prefix "$dir"
           done
 
       - name: Sync optionalDependencies in meta package
