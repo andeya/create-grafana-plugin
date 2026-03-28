@@ -326,4 +326,5 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          cp README.md npm/create-grafana-plugin/README.md
           cd npm/create-grafana-plugin && npm publish --access public

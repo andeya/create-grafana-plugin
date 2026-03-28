@@ -18,7 +18,8 @@
     "cli"
   ],
   "files": [
-    "bin"
+    "bin",
+    "README.md"
   ],
   "bin": {
     "create-grafana-plugin": "bin/index.js"
