@@ -211,14 +211,27 @@ Built-in: `-h` / `--help`, `-V` / `--version`.
 
 **Non-interactive scaffold** requires `--name`, `--type`, `--author`, and `--org`. If any of these are missing, the tool runs interactively (unless insufficient for prompts).
 
-## Versioning
-
-The Rust crate and npm packages share one semver. Bump everything together:
+## Development
 
 ```bash
-npm run bump:patch   # or bump:minor / bump:major
-cargo build          # refresh Cargo.lock
+npm run fmt          # format all Rust code (cargo fmt)
+npm run lint         # check formatting + clippy warnings
+npm run test         # run all tests (cargo test)
+npm run verify       # lint + test in one step
 ```
+
+## Versioning
+
+The Rust crate and npm packages share one semver. The source of truth is `[workspace.package] version` in the root `Cargo.toml`. Bump everything in one step:
+
+```bash
+npm run bump:patch          # 0.1.0 → 0.1.1
+npm run bump:minor          # 0.1.0 → 0.2.0
+npm run bump:major          # 0.1.0 → 1.0.0
+npm run bump -- 2.0.0       # set an explicit version
+```
+
+This updates `Cargo.toml`, root `package.json`, all npm platform packages, and `optionalDependencies` versions in the meta package.
 
 To publish, commit the version bump, then push a Git tag `vX.Y.Z` whose numeric part matches `Cargo.toml` (see `.github/workflows/release.yml`). Maintainer notes: [`AGENTS.md`](AGENTS.md).
 
@@ -231,9 +244,7 @@ Contributions are welcome.
 3. Before submitting a pull request, run:
 
    ```bash
-   cargo fmt
-   cargo clippy --workspace -- -D warnings
-   cargo test --workspace
+   npm run verify
    ```
 
 4. Match existing style for templates and CLI behavior; add or update tests when behavior changes.

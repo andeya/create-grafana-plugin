@@ -213,14 +213,27 @@ my-plugin/
 
 **非交互搭建**须同时提供 `--name`、`--type`、`--author`、`--org`。若缺少任一字段，将进入交互模式（在提示信息足够的前提下）。
 
-## 版本号
-
-Rust crate 与 npm 包共用同一套 semver。可一次性对齐：
+## 开发
 
 ```bash
-npm run bump:patch   # 或 bump:minor / bump:major
-cargo build          # 刷新 Cargo.lock
+npm run fmt          # 格式化所有 Rust 代码（cargo fmt）
+npm run lint         # 检查格式 + clippy 警告
+npm run test         # 运行所有测试（cargo test）
+npm run verify       # lint + test 一步到位
 ```
+
+## 版本号
+
+Rust crate 与 npm 包共用同一套 semver。版本号唯一真实来源为根目录 `Cargo.toml` 的 `[workspace.package] version`。一键同步所有位置：
+
+```bash
+npm run bump:patch          # 0.1.0 → 0.1.1
+npm run bump:minor          # 0.1.0 → 0.2.0
+npm run bump:major          # 0.1.0 → 1.0.0
+npm run bump -- 2.0.0       # 直接指定版本号
+```
+
+该命令会同时更新 `Cargo.toml`、根 `package.json`、所有 npm 平台包以及 meta 包中的 `optionalDependencies` 版本。
 
 发布时提交版本变更后，推送 Git 标签 `vX.Y.Z`，其数字部分须与 `Cargo.toml` 中版本一致（见 `.github/workflows/release.yml`）。维护说明见 [`AGENTS.md`](AGENTS.md)。
 
@@ -233,9 +246,7 @@ cargo build          # 刷新 Cargo.lock
 3. 提交 PR 前请执行：
 
    ```bash
-   cargo fmt
-   cargo clippy --workspace -- -D warnings
-   cargo test --workspace
+   npm run verify
    ```
 
 4. 模板与 CLI 行为请与现有风格一致；行为变更时请补充或更新测试。
