@@ -1,0 +1,12 @@
+/target/
+cli/target/
+dist/
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
+.idea/
+.vscode/
+.cursor/
