@@ -1,5 +1,4 @@
-//! Tera helpers for scaffold generation (API reserved until scaffold is wired).
-#![allow(dead_code)]
+//! Template discovery, rendering, and [`TemplateContext`] for scaffold and update flows.
 
 use anyhow::{Context, Result};
 use serde::Serialize;
@@ -78,7 +77,6 @@ pub struct TemplateContext {
     pub has_wasm: bool,
     pub has_docker: bool,
     pub has_mock: bool,
-    pub package_manager: String,
 
     // Computed fields
     pub plugin_id: String,
@@ -117,7 +115,6 @@ impl TemplateContext {
             has_wasm: config.has_wasm,
             has_docker: config.has_docker,
             has_mock: config.has_mock,
-            package_manager: config.package_manager.to_string(),
             plugin_id,
             crate_name,
             current_year: year,

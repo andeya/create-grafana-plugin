@@ -35,7 +35,10 @@ fn panel_plugin_has_expected_files_and_metadata() {
         "package.json",
         "plugin.json",
         "tsconfig.json",
-        "vite.config.ts",
+        "rspack.config.ts",
+        "tsconfig.test.json",
+        "bunfig.toml",
+        "tests/unit/smoke.test.ts",
         "src/module.ts",
         "src/components/MainPanel.tsx",
         "src/types/index.ts",
@@ -45,7 +48,9 @@ fn panel_plugin_has_expected_files_and_metadata() {
         "AGENTS.md",
         "README.md",
         ".github/workflows/ci.yml",
-        "scripts/bump-version.mjs",
+        "scripts/bump-version.ts",
+        "scripts/clean-plugin-dist.ts",
+        "tests/setup/happydom.ts",
         ".grafana-plugin-version",
     ];
     for rel in expected {

@@ -21,27 +21,6 @@ impl std::fmt::Display for PluginType {
     }
 }
 
-/// Package manager variants
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum PackageManager {
-    Bun,
-    Npm,
-    Pnpm,
-    Yarn,
-}
-
-impl std::fmt::Display for PackageManager {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Bun => write!(f, "bun"),
-            Self::Npm => write!(f, "npm"),
-            Self::Pnpm => write!(f, "pnpm"),
-            Self::Yarn => write!(f, "yarn"),
-        }
-    }
-}
-
 /// Resolved project configuration after merging all input sources
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectConfig {
@@ -53,7 +32,43 @@ pub struct ProjectConfig {
     pub has_wasm: bool,
     pub has_docker: bool,
     pub has_mock: bool,
-    pub package_manager: PackageManager,
+}
+
+/// Template layer directories in merge order — single source of truth for scaffold and [`crate::updater::update`].
+pub fn template_directory_stack(config: &ProjectConfig) -> Vec<&'static str> {
+    let mut dirs = vec!["base"];
+
+    match config.plugin_type {
+        PluginType::Panel => dirs.push("panel"),
+        PluginType::Datasource => dirs.push("datasource"),
+        PluginType::App => dirs.push("app"),
+    }
+
+    if config.has_wasm {
+        dirs.push("wasm");
+    }
+    if config.has_docker {
+        dirs.push("docker");
+    }
+    if config.has_mock && config.has_docker {
+        dirs.push("mock");
+    }
+
+    dirs
+}
+
+/// Ensures flag combinations match what the scaffold can emit.
+///
+/// # Errors
+///
+/// Returns an error when options are inconsistent (e.g. mock without Docker).
+pub fn validate_project_config(config: &ProjectConfig) -> Result<()> {
+    if config.has_mock && !config.has_docker {
+        anyhow::bail!(
+            "Mock data generator requires Docker: pass --docker with --mock, or set docker = true in .grafana-plugin.toml"
+        );
+    }
+    Ok(())
 }
 
 /// TOML config file structure
@@ -67,7 +82,6 @@ struct TomlConfig {
     wasm: Option<bool>,
     docker: Option<bool>,
     mock: Option<bool>,
-    pm: Option<String>,
 }
 
 /// Convert plugin name to valid kebab-case
@@ -101,35 +115,12 @@ pub fn parse_plugin_type(s: &str) -> Result<PluginType> {
     }
 }
 
-fn parse_pm(s: &str) -> Result<PackageManager> {
-    match s.to_lowercase().as_str() {
-        "bun" => Ok(PackageManager::Bun),
-        "npm" => Ok(PackageManager::Npm),
-        "pnpm" => Ok(PackageManager::Pnpm),
-        "yarn" => Ok(PackageManager::Yarn),
-        _ => anyhow::bail!("Invalid package manager: {s}. Use: bun, npm, pnpm, or yarn"),
-    }
-}
-
-/// Parse package manager from a `package.json` `packageManager` value (e.g. `bun@1.2.0`).
-///
-/// # Errors
-///
-/// Returns an error when the package manager name is not supported.
-pub fn parse_package_manager_value(value: &str) -> Result<PackageManager> {
-    let name = value.split('@').next().unwrap_or("bun").trim();
-    parse_pm(name)
-}
-
 /// Build config from CLI args, falling back to TOML file, then interactive prompts.
 ///
 /// # Errors
 ///
 /// Returns an error when config values are invalid or files cannot be read.
 ///
-/// # Panics
-///
-/// Panics if internal option combinations are inconsistent (should not occur in normal use).
 #[allow(clippy::too_many_lines)]
 pub fn resolve_config(args: &crate::cli::Args) -> Result<ProjectConfig> {
     // Load TOML config if specified
@@ -179,28 +170,24 @@ pub fn resolve_config(args: &crate::cli::Args) -> Result<ProjectConfig> {
     } else {
         toml_cfg.as_ref().and_then(|c| c.mock)
     };
-    let pm_str = if args.pm == "bun" {
-        toml_cfg.as_ref().and_then(|c| c.pm.clone())
-    } else {
-        Some(args.pm.clone())
-    };
-
-    // Check if we have enough info for non-interactive mode
-    let all_provided =
-        name.is_some() && plugin_type_str.is_some() && author.is_some() && org.is_some();
-
-    if all_provided {
-        return Ok(ProjectConfig {
-            name: to_kebab_case(&name.unwrap()),
-            description: description.unwrap_or_default(),
-            author: author.unwrap(),
-            org: org.unwrap(),
-            plugin_type: parse_plugin_type(&plugin_type_str.unwrap())?,
+    if let (Some(name_val), Some(ptype_val), Some(author_val), Some(org_val)) = (
+        name.as_deref(),
+        plugin_type_str.as_deref(),
+        author.as_deref(),
+        org.as_deref(),
+    ) {
+        let cfg = ProjectConfig {
+            name: to_kebab_case(name_val),
+            description: description.clone().unwrap_or_default(),
+            author: author_val.to_string(),
+            org: org_val.to_string(),
+            plugin_type: parse_plugin_type(ptype_val)?,
             has_wasm: has_wasm.unwrap_or(false),
             has_docker: has_docker.unwrap_or(false),
             has_mock: has_mock.unwrap_or(false),
-            package_manager: parse_pm(&pm_str.unwrap_or_else(|| "bun".into()))?,
-        });
+        };
+        validate_project_config(&cfg)?;
+        return Ok(cfg);
     }
 
     // Interactive mode
@@ -294,24 +281,7 @@ pub fn resolve_config(args: &crate::cli::Args) -> Result<ProjectConfig> {
         false
     };
 
-    let package_manager = if let Some(ref pm) = pm_str {
-        parse_pm(pm)?
-    } else {
-        let pms = ["bun", "npm", "pnpm", "yarn"];
-        let idx = Select::new()
-            .with_prompt("  Package manager")
-            .items(&pms)
-            .default(0)
-            .interact()?;
-        match idx {
-            0 => PackageManager::Bun,
-            1 => PackageManager::Npm,
-            2 => PackageManager::Pnpm,
-            _ => PackageManager::Yarn,
-        }
-    };
-
-    Ok(ProjectConfig {
+    let cfg = ProjectConfig {
         name,
         description,
         author,
@@ -320,6 +290,51 @@ pub fn resolve_config(args: &crate::cli::Args) -> Result<ProjectConfig> {
         has_wasm,
         has_docker,
         has_mock,
-        package_manager,
-    })
+    };
+    validate_project_config(&cfg)?;
+    Ok(cfg)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_cfg(has_docker: bool, has_mock: bool) -> ProjectConfig {
+        ProjectConfig {
+            name: "x".to_string(),
+            description: String::new(),
+            author: String::new(),
+            org: String::new(),
+            plugin_type: PluginType::Panel,
+            has_wasm: false,
+            has_docker,
+            has_mock,
+        }
+    }
+
+    #[test]
+    fn validate_rejects_mock_without_docker() {
+        let err = validate_project_config(&sample_cfg(false, true)).unwrap_err();
+        assert!(
+            err.to_string().contains("Mock"),
+            "unexpected message: {err}"
+        );
+    }
+
+    #[test]
+    fn validate_accepts_mock_with_docker() {
+        validate_project_config(&sample_cfg(true, true)).unwrap();
+    }
+
+    #[test]
+    fn template_stack_includes_mock_only_with_docker() {
+        let with = template_directory_stack(&sample_cfg(true, true));
+        assert!(with.contains(&"mock"));
+
+        let without = template_directory_stack(&sample_cfg(true, false));
+        assert!(!without.contains(&"mock"));
+
+        let mock_but_no_docker = template_directory_stack(&sample_cfg(false, true));
+        assert!(!mock_but_no_docker.contains(&"mock"));
+    }
 }

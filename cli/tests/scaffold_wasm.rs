@@ -45,6 +45,24 @@ fn panel_wasm_includes_workspace_and_crate() {
     let lib_rs = root.join(&crate_name).join("src/lib.rs");
     assert!(lib_rs.is_file(), "lib.rs should exist");
 
-    let wasm_bridge = root.join("src/services/wasm-bridge.ts");
-    assert!(wasm_bridge.is_file(), "wasm bridge TS should exist");
+    let wasm_bridge = fs::read_to_string(root.join("src/services/wasm-bridge.ts")).expect("wasm");
+    assert!(
+        wasm_bridge.contains("initSync") && wasm_bridge.contains("_bg.wasm"),
+        "wasm bridge should use initSync + inlined wasm import"
+    );
+
+    let rspack = fs::read_to_string(root.join("rspack.config.ts")).expect("rspack");
+    assert!(
+        rspack.contains("asset/inline") && rspack.contains(".wasm"),
+        "rspack should inline .wasm"
+    );
+
+    assert!(
+        root.join("src/types/wasm.d.ts").is_file(),
+        "wasm.d.ts should exist"
+    );
+    assert!(
+        root.join("scripts/bump-version.ts").is_file(),
+        "bump-version.ts should exist"
+    );
 }

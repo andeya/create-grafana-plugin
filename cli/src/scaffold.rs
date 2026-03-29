@@ -5,30 +5,8 @@ use colored::Colorize;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::config::ProjectConfig;
+use crate::config::{ProjectConfig, template_directory_stack};
 use crate::template::{self, TemplateContext};
-
-fn select_template_dirs(config: &ProjectConfig) -> Vec<&'static str> {
-    let mut dirs = vec!["base"];
-
-    match config.plugin_type {
-        crate::config::PluginType::Panel => dirs.push("panel"),
-        crate::config::PluginType::Datasource => dirs.push("datasource"),
-        crate::config::PluginType::App => dirs.push("app"),
-    }
-
-    if config.has_wasm {
-        dirs.push("wasm");
-    }
-    if config.has_docker {
-        dirs.push("docker");
-    }
-    if config.has_mock && config.has_docker {
-        dirs.push("mock");
-    }
-
-    dirs
-}
 
 /// Generate the complete project scaffold.
 ///
@@ -48,7 +26,7 @@ pub fn generate(config: &ProjectConfig) -> Result<PathBuf> {
 
     let tpl_root = template::templates_root()?;
     let context = TemplateContext::from_config(config);
-    let template_dirs = select_template_dirs(config);
+    let template_dirs = template_directory_stack(config);
 
     println!("\n  {} {}", "Creating".green().bold(), config.name.bold());
     println!("  Templates: {}", template_dirs.join(" + "));
@@ -102,19 +80,18 @@ pub fn generate(config: &ProjectConfig) -> Result<PathBuf> {
     println!("\n  {}\n", "Next steps:".bold());
     println!("    cd {}", config.name);
 
-    let pm = &config.package_manager;
     if config.has_wasm {
-        println!("    {pm} run setup");
+        println!("    bun run setup");
     } else {
-        println!("    {pm} install");
+        println!("    bun install");
     }
-    println!("    {pm} run build");
+    println!("    bun run build");
 
     if config.has_docker {
         println!("    docker compose up -d");
     }
 
-    println!("    {pm} run dev");
+    println!("    bun run dev");
     println!();
 
     Ok(output_dir)

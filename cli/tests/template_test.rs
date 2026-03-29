@@ -1,6 +1,6 @@
 //! Template rendering: substitution, conditionals, derived fields (9.5).
 
-use create_grafana_plugin::config::{PackageManager, PluginType, ProjectConfig};
+use create_grafana_plugin::config::{PluginType, ProjectConfig};
 use create_grafana_plugin::template::{TemplateContext, render_string};
 
 fn sample_config() -> ProjectConfig {
@@ -13,7 +13,6 @@ fn sample_config() -> ProjectConfig {
         has_wasm: true,
         has_docker: false,
         has_mock: false,
-        package_manager: PackageManager::Bun,
     }
 }
 
@@ -57,14 +56,12 @@ fn template_context_derived_fields() {
         has_wasm: true,
         has_docker: true,
         has_mock: true,
-        package_manager: PackageManager::Pnpm,
     };
     let ctx = TemplateContext::from_config(&cfg);
     assert_eq!(ctx.plugin_id, "orgx-foo-bar-baz");
     assert_eq!(ctx.crate_name, "foo_bar_baz");
     assert_eq!(ctx.pascal_case_name, "FooBarBaz");
     assert_eq!(ctx.plugin_type, "datasource");
-    assert_eq!(ctx.package_manager, "pnpm");
     assert!(!ctx.current_year.is_empty());
     assert!(!ctx.today.is_empty());
 }

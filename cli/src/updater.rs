@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::config::{self, PluginType, ProjectConfig};
+use crate::config::{self, ProjectConfig};
 use crate::template::{self, TemplateContext};
 
 const VERSION_MARKER_FILE: &str = ".grafana-plugin-version";
@@ -25,6 +25,7 @@ const KNOWN_MANAGED_JSON_RELS: &[&str] = &[
     "plugin.json",
     "package.json",
     "tsconfig.json",
+    "tsconfig.test.json",
     ".eslintrc.json",
     ".prettierrc",
 ];
@@ -42,7 +43,7 @@ pub fn update(dry_run: bool) -> Result<()> {
     let mut context = TemplateContext::from_config(&cfg);
     context.apply_dates_from_existing_plugin_json(&project_dir);
 
-    let dirs = select_template_dirs_for_update(&cfg);
+    let dirs = config::template_directory_stack(&cfg);
     println!(
         "\n  {} {} (scaffold version: {})",
         "Updating".green().bold(),
@@ -147,7 +148,7 @@ fn write_version_marker(project_dir: &Path) -> Result<()> {
 }
 
 /// Read the version stored when the project was scaffolded or last updated.
-pub fn read_version_marker(project_dir: &Path) -> Option<String> {
+fn read_version_marker(project_dir: &Path) -> Option<String> {
     let path = project_dir.join(VERSION_MARKER_FILE);
     fs::read_to_string(&path)
         .ok()
@@ -285,20 +286,10 @@ fn discover_project_config(project_dir: &Path) -> Result<ProjectConfig> {
         .unwrap_or("")
         .to_string();
 
-    let pkg_path = project_dir.join("package.json");
-    let pkg_raw = fs::read_to_string(&pkg_path)
-        .with_context(|| format!("Expected package.json at {}", pkg_path.display()))?;
-    let pkg: Value = serde_json::from_str(&pkg_raw)
-        .with_context(|| format!("Invalid JSON in {}", pkg_path.display()))?;
-    let pm_str = pkg
-        .get("packageManager")
-        .and_then(Value::as_str)
-        .unwrap_or("bun@latest");
-    let package_manager = config::parse_package_manager_value(pm_str)?;
-
     let has_wasm = project_dir.join("Cargo.toml").exists();
     let has_docker = project_dir.join("docker-compose.yml").exists();
-    let has_mock = project_dir.join("otel-mock").is_dir();
+    // Align with scaffold: mock templates ship only with Docker: ignore orphan `otel-mock/`.
+    let has_mock = has_docker && project_dir.join("otel-mock").is_dir();
 
     Ok(ProjectConfig {
         name: config::to_kebab_case(name),
@@ -309,27 +300,7 @@ fn discover_project_config(project_dir: &Path) -> Result<ProjectConfig> {
         has_wasm,
         has_docker,
         has_mock,
-        package_manager,
     })
-}
-
-fn select_template_dirs_for_update(config: &ProjectConfig) -> Vec<&'static str> {
-    let mut dirs = vec!["base"];
-    match config.plugin_type {
-        PluginType::Panel => dirs.push("panel"),
-        PluginType::Datasource => dirs.push("datasource"),
-        PluginType::App => dirs.push("app"),
-    }
-    if config.has_wasm {
-        dirs.push("wasm");
-    }
-    if config.has_docker {
-        dirs.push("docker");
-    }
-    if config.has_mock {
-        dirs.push("mock");
-    }
-    dirs
 }
 
 #[cfg(test)]

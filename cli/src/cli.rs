@@ -36,10 +36,6 @@ pub struct Args {
     #[arg(long)]
     pub mock: bool,
 
-    /// Package manager: bun, npm, pnpm, yarn
-    #[arg(long, default_value = "bun")]
-    pub pm: String,
-
     /// Read config from file
     #[arg(long, value_name = "FILE")]
     pub config: Option<String>,
