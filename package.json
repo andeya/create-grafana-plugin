@@ -1,6 +1,6 @@
 {
   "name": "create-grafana-plugin",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "CLI tool to scaffold production-ready Grafana plugin projects with Rspack, bun, optional Rust WASM, Docker dev environment, and mock data generator.",
   "author": "andeya <andeyalee@gmail.com>",
   "license": "MIT",
