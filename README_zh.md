@@ -1,6 +1,6 @@
 # create-grafana-plugin
 
-**用于搭建可投入生产的 Grafana 插件项目** —— 基于 Vite 的前端工具链、可选的 Rust WASM、Docker 开发环境、Mock 数据工具，以及多种 JavaScript 包管理器。提供 `update` 子命令，用于将已有项目与最新模板对齐。
+**用于搭建可投入生产的 Grafana 插件项目** —— 基于 Rspack 的前端构建（Grafana AMD 输出）、可选的 Rust WASM、Docker 开发环境、Mock 数据工具，以及生成项目统一使用 **Bun**（安装、测试、构建脚本）。提供 `update` 子命令，用于将已有项目与最新模板对齐。
 
 [English](README.md) · **中文**
 
@@ -10,7 +10,7 @@
 - **可选 Rust WASM**：提供 wasm-pack 就绪的 crate 与 TypeScript 桥接，在浏览器中获得接近原生的性能。
 - **Docker 开发环境**：可选 Compose 编排，统一 Grafana + 插件开发体验。
 - **Mock 数据生成器**：可选 `otel-mock` 服务（通常与 Docker 工作流配合使用）。
-- **包管理器**：生成的前端工具链可选用 **bun**（默认）、**npm**、**pnpm** 或 **yarn**。
+- **Bun**：生成的插件项目使用 **Bun**（`packageManager`、`bun test`、`bun run build`、TypeScript 工具脚本）。
 - **非交互与配置文件**：通过命令行参数或 `.grafana-plugin.toml` 便于 CI 与可重复搭建。
 - **update 子命令**：在已有项目中按当前工具版本刷新「受管理」文件，支持 `--dry-run` 预览差异。
 
@@ -20,7 +20,7 @@
 npx create-grafana-plugin@latest
 ```
 
-按提示输入插件名称、类型、是否包含 WASM、Docker、Mock 数据及包管理器。工具会创建与插件同名的目录并输出后续步骤（`cd`、安装、构建、可选 `docker compose up`）。
+按提示输入插件名称、类型、是否包含 WASM、Docker、Mock 数据（启用 Docker 时）。工具会创建与插件同名的目录并输出后续步骤（`cd`、`bun install` 或 `bun run setup`、构建、可选 `docker compose up`）。
 
 ## 安装
 
@@ -60,7 +60,7 @@ cargo install --path cli
 npx create-grafana-plugin
 ```
 
-将依次提示：插件名称、描述、作者、组织、插件类型、WASM、Docker、Mock（在启用 Docker 时）、包管理器。
+将依次提示：插件名称、描述、作者、组织、插件类型、WASM、Docker、Mock（在启用 Docker 时）。
 
 ### 非交互模式
 
@@ -75,7 +75,7 @@ npx create-grafana-plugin \
   --description "My Grafana panel"
 ```
 
-可选参数：`--wasm`、`--docker`、`--mock`、`--pm <bun|npm|pnpm|yarn>`（默认 `bun`）。
+可选参数：`--wasm`、`--docker`、`--mock`（`--mock` 须同时指定 `--docker`）。
 
 ### 同时启用 WASM 与 Docker
 
@@ -106,7 +106,7 @@ cd my-plugin
 npx create-grafana-plugin update
 ```
 
-更新器会从 `plugin.json`、`package.json` 以及目录结构（如是否存在 `Cargo.toml`、`docker-compose.yml`、`otel-mock/`）推断插件类型、组织、名称、包管理器及 WASM/Docker/Mock。仅覆盖**受管理**的文件（生成代码中带标记，或属于已知的 JSON 管理路径）；其余文件不覆盖或跳过。
+更新器会从 `plugin.json`、`package.json` 以及目录结构（如是否存在 `Cargo.toml`、`docker-compose.yml`、`otel-mock/`）推断插件类型、组织、名称及 WASM/Docker/Mock。仅覆盖**受管理**的文件（生成代码中带标记，或属于已知的 JSON 管理路径）；其余文件不覆盖或跳过。
 
 ### 预演更新（dry run）
 
@@ -120,17 +120,16 @@ npx create-grafana-plugin update --dry-run
 
 使用 TOML 驱动搭建，避免超长命令行。通过 `--config <路径>` 指定。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `name` | string | 插件名称（规范为 kebab-case）。 |
-| `description` | string | 描述。 |
-| `author` | string | 作者显示名。 |
-| `org` | string | Grafana 插件 id 中的组织段（完整 id：`org-name`）。 |
-| `type` | string | `panel`、`datasource` 或 `app`（`data-source` 可作为 datasource 的别名）。 |
-| `wasm` | bool | 是否包含 Rust WASM 工作区与桥接代码。 |
-| `docker` | bool | 是否包含 Docker Compose 与 provisioning。 |
-| `mock` | bool | 是否包含 Mock 数据生成器（通常与 Docker 一起使用）。 |
-| `pm` | string | `bun`、`npm`、`pnpm` 或 `yarn`。 |
+| 字段          | 类型   | 说明                                                                       |
+| ------------- | ------ | -------------------------------------------------------------------------- |
+| `name`        | string | 插件名称（规范为 kebab-case）。                                            |
+| `description` | string | 描述。                                                                     |
+| `author`      | string | 作者显示名。                                                               |
+| `org`         | string | Grafana 插件 id 中的组织段（完整 id：`org-name`）。                        |
+| `type`        | string | `panel`、`datasource` 或 `app`（`data-source` 可作为 datasource 的别名）。 |
+| `wasm`        | bool   | 是否包含 Rust WASM 工作区与桥接代码。                                      |
+| `docker`      | bool   | 是否包含 Docker Compose 与 provisioning。                                  |
+| `mock`        | bool   | 是否包含 Mock 数据生成器（通常与 Docker 一起使用）。                       |
 
 示例：
 
@@ -143,7 +142,6 @@ type = "panel"
 wasm = true
 docker = true
 mock = true
-pm = "bun"
 ```
 
 合并规则上，部分 CLI 参数会覆盖 TOML（例如 `--wasm` 会强制启用 WASM）。生成后的项目**运行时不依赖**该文件；它仅作为 `create` 流程的可选输入。
@@ -171,7 +169,10 @@ my-plugin/
 ├── plugin.json
 ├── package.json
 ├── tsconfig.json
-├── vite.config.ts
+├── tsconfig.test.json
+├── rspack.config.ts
+├── bunfig.toml
+├── tests/
 ├── README.md
 └── AGENTS.md
 ```
@@ -190,23 +191,22 @@ my-plugin/
 
 搭建（主命令）全局选项：
 
-| 选项 | 说明 |
-|------|------|
-| `--name <NAME>` | 插件名称（kebab-case）。 |
-| `--description <TEXT>` | 插件描述。 |
-| `--author <NAME>` | 作者名。 |
-| `--org <ORG>` | 插件 id 中的组织段。 |
-| `--type <TYPE>` | `panel`、`datasource` 或 `app`。 |
-| `--wasm` | 包含 Rust WASM crate 与桥接。 |
-| `--docker` | 包含基于 Docker 的开发环境。 |
-| `--mock` | 包含 Mock 数据生成器（在 scaffold 中与 Docker 配合）。 |
-| `--pm <PM>` | 包管理器：`bun`（默认）、`npm`、`pnpm`、`yarn`。 |
-| `--config <FILE>` | 从 TOML 加载配置。 |
+| 选项                   | 说明                                                   |
+| ---------------------- | ------------------------------------------------------ |
+| `--name <NAME>`        | 插件名称（kebab-case）。                               |
+| `--description <TEXT>` | 插件描述。                                             |
+| `--author <NAME>`      | 作者名。                                               |
+| `--org <ORG>`          | 插件 id 中的组织段。                                   |
+| `--type <TYPE>`        | `panel`、`datasource` 或 `app`。                       |
+| `--wasm`               | 包含 Rust WASM crate 与桥接。                          |
+| `--docker`             | 包含基于 Docker 的开发环境。                           |
+| `--mock`               | 包含 Mock 数据生成器（在 scaffold 中与 Docker 配合）。 |
+| `--config <FILE>`      | 从 TOML 加载配置。                                     |
 
 `update` 子命令：
 
-| 选项 | 说明 |
-|------|------|
+| 选项        | 说明                         |
+| ----------- | ---------------------------- |
 | `--dry-run` | 仅显示差异与新文件，不写盘。 |
 
 内置：`-h` / `--help`，`-V` / `--version`。
@@ -216,10 +216,10 @@ my-plugin/
 ## 开发
 
 ```bash
-npm run fmt          # 格式化所有 Rust 代码（cargo fmt）
-npm run lint         # 检查格式 + clippy 警告
-npm run test         # 运行所有测试（cargo test）
-npm run verify       # lint + test 一步到位
+bun run fmt          # 格式化所有 Rust 代码（cargo fmt）
+bun run lint         # 检查格式 + clippy 警告
+bun run test         # 运行所有测试（cargo test）
+bun run verify       # lint + test 一步到位
 ```
 
 ## 版本号
@@ -227,10 +227,10 @@ npm run verify       # lint + test 一步到位
 Rust crate 与 npm 包共用同一套 semver。版本号唯一真实来源为根目录 `Cargo.toml` 的 `[workspace.package] version`。一键同步所有位置：
 
 ```bash
-npm run bump:patch          # 0.1.0 → 0.1.1
-npm run bump:minor          # 0.1.0 → 0.2.0
-npm run bump:major          # 0.1.0 → 1.0.0
-npm run bump -- 2.0.0       # 直接指定版本号
+bun run bump:patch          # 0.1.0 → 0.1.1
+bun run bump:minor          # 0.1.0 → 0.2.0
+bun run bump:major          # 0.1.0 → 1.0.0
+bun run bump -- 2.0.0       # 直接指定版本号
 ```
 
 该命令会同时更新 `Cargo.toml`、根 `package.json`、所有 npm 平台包以及 meta 包中的 `optionalDependencies` 版本。
@@ -246,7 +246,7 @@ npm run bump -- 2.0.0       # 直接指定版本号
 3. 提交 PR 前请执行：
 
    ```bash
-   npm run verify
+   bun run verify
    ```
 
 4. 模板与 CLI 行为请与现有风格一致；行为变更时请补充或更新测试。

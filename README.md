@@ -1,6 +1,6 @@
 # create-grafana-plugin
 
-**Scaffold production-ready Grafana plugin projects** — Vite-based frontend, optional Rust WASM, Docker development stack, mock data tooling, and your choice of JavaScript package manager. Includes an `update` command to align existing projects with the latest template.
+**Scaffold production-ready Grafana plugin projects** — Rspack-based frontend (AMD for Grafana), optional Rust WASM, Docker development stack, mock data tooling, and **Bun** for the generated frontend (install, test, build scripts). Includes an `update` command to align existing projects with the latest template.
 
 **English** · [中文](README_zh.md)
 
@@ -10,7 +10,7 @@
 - **Optional Rust WASM**: wasm-pack–ready crate and TypeScript bridge when you need native performance in the browser.
 - **Docker development environment**: Optional Compose stack for a repeatable Grafana + plugin workflow.
 - **Mock data generator**: Optional `otel-mock` service (intended alongside the Docker workflow).
-- **Package managers**: **bun** (default), **npm**, **pnpm**, or **yarn** for the generated frontend toolchain.
+- **Bun**: Generated plugins use **Bun** (`packageManager`, `bun test`, `bun run build`, TypeScript utility scripts).
 - **Non-interactive and config-driven**: Pass flags or a `.grafana-plugin.toml` file for CI and repeatable scaffolds.
 - **Update subcommand**: Refresh managed files in an existing project against the current tool version, with `--dry-run` to preview diffs.
 
@@ -20,7 +20,7 @@
 npx create-grafana-plugin@latest
 ```
 
-Follow the prompts for plugin name, type, optional WASM, Docker, mock data, and package manager. The tool creates a new directory named after your plugin and prints next steps (`cd`, install, build, optional `docker compose up`).
+Follow the prompts for plugin name, type, optional WASM, Docker, and mock data (when Docker is enabled). The tool creates a new directory named after your plugin and prints next steps (`cd`, `bun install` or `bun run setup`, build, optional `docker compose up`).
 
 ## Installation
 
@@ -60,7 +60,7 @@ Run without the flags required for non-interactive mode:
 npx create-grafana-plugin
 ```
 
-You will be prompted for plugin name, description, author, organization, plugin type, WASM, Docker, mock data (when Docker is enabled), and package manager.
+You will be prompted for plugin name, description, author, organization, plugin type, WASM, Docker, and mock data (when Docker is enabled).
 
 ### Non-interactive mode
 
@@ -75,7 +75,7 @@ npx create-grafana-plugin \
   --description "My Grafana panel"
 ```
 
-Optional flags: `--wasm`, `--docker`, `--mock`, `--pm <bun|npm|pnpm|yarn>` (default: `bun`).
+Optional flags: `--wasm`, `--docker`, `--mock` (`--mock` requires `--docker`).
 
 ### With WASM and Docker
 
@@ -106,7 +106,7 @@ cd my-plugin
 npx create-grafana-plugin update
 ```
 
-The updater discovers plugin type, org, name, package manager, and optional WASM/Docker/mock layout from `plugin.json`, `package.json`, and the filesystem. It only overwrites **managed** files (marked in generated sources or listed as known JSON paths); other files are left unchanged or skipped.
+The updater discovers plugin type, org, name, and optional WASM/Docker/mock layout from `plugin.json`, `package.json`, and the filesystem. It only overwrites **managed** files (marked in generated sources or listed as known JSON paths); other files are left unchanged or skipped.
 
 ### Dry run (preview changes)
 
@@ -120,17 +120,16 @@ Prints diffs and planned new files without writing to disk.
 
 Use a TOML file to drive scaffolding without long command lines. Pass it with `--config <path>`.
 
-| Field           | Type    | Description |
-|----------------|---------|-------------|
-| `name`          | string  | Plugin name (normalized to kebab-case). |
-| `description`   | string  | Human-readable description. |
-| `author`        | string  | Author display name. |
-| `org`           | string  | Grafana plugin org segment (plugin id: `org-name`). |
-| `type`          | string  | `panel`, `datasource`, or `app` (`data-source` is accepted as an alias for datasource). |
-| `wasm`          | bool    | Include Rust WASM workspace and bridge. |
-| `docker`        | bool    | Include Docker Compose and provisioning. |
-| `mock`          | bool    | Include mock data generator (typically with Docker). |
-| `pm`            | string  | `bun`, `npm`, `pnpm`, or `yarn`. |
+| Field         | Type   | Description                                                                             |
+| ------------- | ------ | --------------------------------------------------------------------------------------- |
+| `name`        | string | Plugin name (normalized to kebab-case).                                                 |
+| `description` | string | Human-readable description.                                                             |
+| `author`      | string | Author display name.                                                                    |
+| `org`         | string | Grafana plugin org segment (plugin id: `org-name`).                                     |
+| `type`        | string | `panel`, `datasource`, or `app` (`data-source` is accepted as an alias for datasource). |
+| `wasm`        | bool   | Include Rust WASM workspace and bridge.                                                 |
+| `docker`      | bool   | Include Docker Compose and provisioning.                                                |
+| `mock`        | bool   | Include mock data generator (typically with Docker).                                    |
 
 Example:
 
@@ -143,7 +142,6 @@ type = "panel"
 wasm = true
 docker = true
 mock = true
-pm = "bun"
 ```
 
 CLI flags override TOML values where the implementation merges them (e.g. `--wasm` forces WASM on). The generated project does **not** require this file at runtime; it is optional input for the scaffold command only.
@@ -171,7 +169,10 @@ my-plugin/
 ├── plugin.json
 ├── package.json
 ├── tsconfig.json
-├── vite.config.ts
+├── tsconfig.test.json
+├── rspack.config.ts
+├── bunfig.toml
+├── tests/
 ├── README.md
 └── AGENTS.md
 ```
@@ -190,23 +191,22 @@ This repository ships **Tera** templates under `templates/` (`base`, `panel`, `d
 
 Global options (scaffold):
 
-| Option | Description |
-|--------|-------------|
-| `--name <NAME>` | Plugin name (kebab-case). |
-| `--description <TEXT>` | Plugin description. |
-| `--author <NAME>` | Author name. |
-| `--org <ORG>` | Organization segment for the plugin id. |
-| `--type <TYPE>` | `panel`, `datasource`, or `app`. |
-| `--wasm` | Include Rust WASM crate and bridge. |
-| `--docker` | Include Docker-based dev environment. |
-| `--mock` | Include mock data generator (with Docker in scaffold). |
-| `--pm <PM>` | Package manager: `bun` (default), `npm`, `pnpm`, `yarn`. |
-| `--config <FILE>` | Load settings from a TOML file. |
+| Option                 | Description                                            |
+| ---------------------- | ------------------------------------------------------ |
+| `--name <NAME>`        | Plugin name (kebab-case).                              |
+| `--description <TEXT>` | Plugin description.                                    |
+| `--author <NAME>`      | Author name.                                           |
+| `--org <ORG>`          | Organization segment for the plugin id.                |
+| `--type <TYPE>`        | `panel`, `datasource`, or `app`.                       |
+| `--wasm`               | Include Rust WASM crate and bridge.                    |
+| `--docker`             | Include Docker-based dev environment.                  |
+| `--mock`               | Include mock data generator (with Docker in scaffold). |
+| `--config <FILE>`      | Load settings from a TOML file.                        |
 
 Subcommand `update`:
 
-| Option | Description |
-|--------|-------------|
+| Option      | Description                               |
+| ----------- | ----------------------------------------- |
 | `--dry-run` | Show diffs and new files without writing. |
 
 Built-in: `-h` / `--help`, `-V` / `--version`.
@@ -216,10 +216,10 @@ Built-in: `-h` / `--help`, `-V` / `--version`.
 ## Development
 
 ```bash
-npm run fmt          # format all Rust code (cargo fmt)
-npm run lint         # check formatting + clippy warnings
-npm run test         # run all tests (cargo test)
-npm run verify       # lint + test in one step
+bun run fmt          # format all Rust code (cargo fmt)
+bun run lint         # check formatting + clippy warnings
+bun run test         # run all tests (cargo test)
+bun run verify       # lint + test in one step
 ```
 
 ## Versioning
@@ -227,10 +227,10 @@ npm run verify       # lint + test in one step
 The Rust crate and npm packages share one semver. The source of truth is `[workspace.package] version` in the root `Cargo.toml`. Bump everything in one step:
 
 ```bash
-npm run bump:patch          # 0.1.0 → 0.1.1
-npm run bump:minor          # 0.1.0 → 0.2.0
-npm run bump:major          # 0.1.0 → 1.0.0
-npm run bump -- 2.0.0       # set an explicit version
+bun run bump:patch          # 0.1.0 → 0.1.1
+bun run bump:minor          # 0.1.0 → 0.2.0
+bun run bump:major          # 0.1.0 → 1.0.0
+bun run bump -- 2.0.0       # set an explicit version
 ```
 
 This updates `Cargo.toml`, root `package.json`, all npm platform packages, and `optionalDependencies` versions in the meta package.
@@ -246,7 +246,7 @@ Contributions are welcome.
 3. Before submitting a pull request, run:
 
    ```bash
-   npm run verify
+   bun run verify
    ```
 
 4. Match existing style for templates and CLI behavior; add or update tests when behavior changes.
