@@ -3,9 +3,9 @@ import React from 'react';
 import type { PanelProps } from '@grafana/data';
 {% if has_wasm %}import { getWasmStatus } from '../services/wasm-bridge';{% endif %}
 
-interface Props extends PanelProps<{}> {}
+type PanelPropsEmpty = PanelProps<Record<string, never>>;
 
-export const {{ pascal_case_name }}Panel: React.FC<Props> = ({ data, width, height }) => {
+export const {{ pascal_case_name }}Panel: React.FC<PanelPropsEmpty> = ({ data, width, height }) => {
   return (
     <div style={% raw %}{{ width, height, overflow: 'auto', padding: 8 }}{% endraw %}>
       <h3>{{ pascal_case_name }}</h3>

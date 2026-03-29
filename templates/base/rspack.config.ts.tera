@@ -1,0 +1,90 @@
+// @managed by create-grafana-plugin — do not edit
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import rspack from '@rspack/core';
+import type { Configuration } from '@rspack/core';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const PLUGIN_ID = '{{ plugin_id }}';
+
+export default {
+  mode: 'production',
+  entry: {
+    module: './src/module.ts',
+  },
+  output: {
+    filename: 'module.js',
+    path: path.resolve(__dirname, `dist/${PLUGIN_ID}`),
+    library: {
+      // Anonymous AMD — Grafana loads plugins via its own AMD loader
+      type: 'amd',
+    },
+    clean: true,
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+    extensions: ['.ts', '.tsx', '.js', '.jsx'],
+  },
+  module: {
+    rules: [
+      {
+        test: /\.(ts|tsx)$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: 'builtin:swc-loader',
+            options: {
+              jsc: {
+                parser: {
+                  syntax: 'typescript',
+                  tsx: true,
+                },
+                transform: {
+                  react: {
+                    runtime: 'automatic',
+                  },
+                },
+                target: 'es2020',
+              },
+            },
+          },
+        ],
+      },
+{% if has_wasm %}
+      {
+        // Inline .wasm as base64 data URL — avoids a separate network request
+        // and works around Grafana's static server blocking .wasm MIME types.
+        test: /\.wasm$/,
+        type: 'asset/inline',
+      },
+{% endif %}
+    ],
+  },
+  // Output is always AMD for Grafana's plugin loader — only the `amd` key matters.
+  externals: {
+    react: { amd: 'react' },
+    'react-dom': { amd: 'react-dom' },
+    '@grafana/data': { amd: '@grafana/data' },
+    '@grafana/ui': { amd: '@grafana/ui' },
+    '@grafana/runtime': { amd: '@grafana/runtime' },
+  },
+  plugins: [
+    new rspack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    }),
+    new rspack.CopyRspackPlugin({
+      patterns: [
+        { from: 'plugin.json', to: '.' },
+        { from: 'README.md', to: '.' },
+        { from: 'src/img', to: 'img', noErrorOnMissing: true },
+      ],
+    }),
+  ],
+  optimization: {
+    minimize: true,
+  },
+  stats: 'errors-warnings',
+} satisfies Configuration;

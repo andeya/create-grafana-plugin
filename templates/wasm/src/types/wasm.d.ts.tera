@@ -1,0 +1,7 @@
+// @managed by create-grafana-plugin — do not edit
+// Type declaration for .wasm imports.
+// Both rspack (asset/inline) and bun (loader = "dataurl") emit these as data URLs.
+declare module '*.wasm' {
+  const dataUrl: string;
+  export default dataUrl;
+}

@@ -9,8 +9,8 @@ It is the single source of truth — IDE-specific config files should reference 
 
 - **Project**: {% for word in plugin_name | split(pat='-') %}{{ word | capitalize }}{% if not loop.last %} {% endif %}{% endfor %} — {{ plugin_description }}
 - **Architecture**: React 18 (TypeScript) frontend{% if has_wasm %} + Rust WASM{% endif %} Grafana {{ plugin_type }} plugin{% if has_docker %} — Docker dev environment included{% endif %}{% if has_mock %} — mock data tooling included{% endif %}
-- **Build**: Vite 5 (AMD output), {{ package_manager }}{% if has_wasm %}, wasm-pack (Rust→WASM){% endif %}
-- **Test**: Vitest (frontend){% if has_wasm %}, cargo test (Rust){% endif %}
+- **Build**: Rspack (AMD output for Grafana), Bun{% if has_wasm %}, wasm-pack (Rust→WASM){% endif %}
+- **Test**: Bun test + happy-dom (frontend){% if has_wasm %}, `cargo test --workspace` (Rust){% endif %}
 
 ## Language & Style
 
@@ -24,7 +24,7 @@ It is the single source of truth — IDE-specific config files should reference 
 **CRITICAL**: Before producing a commit, run the full verification pipeline:
 
 ```bash
-{{ package_manager }} run verify
+bun run verify
 ```
 
 If any check fails, fix the issue before committing. Never skip verification.
@@ -57,6 +57,10 @@ If any check fails, fix the issue before committing. Never skip verification.
 - All public items **must** have `///` doc comments
 
 {% endif %}
+## Version bumps
+
+Run `bun run bump patch|minor|major` or `bun run bump x.y.z`. This updates `package.json`, `plugin.json`{% if has_wasm %}, `{{ crate_name }}/Cargo.toml` `version`{% endif %}{% if has_mock %}`, and `otel-mock/Cargo.toml` `version`{% endif %}.
+
 ## Testing
 
 - Every new feature **should** have at least one test

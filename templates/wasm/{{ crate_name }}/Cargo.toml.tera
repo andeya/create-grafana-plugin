@@ -1,10 +1,10 @@
 # @managed by create-grafana-plugin — do not edit
 [package]
 name = "{{ crate_name }}"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
+version = "1.0.0"
+edition = "2021"
+authors = ["{{ author }}"]
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

@@ -1,39 +1,52 @@
 // @managed by create-grafana-plugin — do not edit
-import { wasmBase64, wasmMode } from 'virtual:{{ crate_name }}-wasm';
-import initWasm, { initSync, greet } from '../../{{ crate_name }}/pkg/{{ crate_name }}';
+import { initSync, greet } from '../../{{ crate_name }}/pkg/{{ crate_name }}';
+// Rspack emits .wasm as a base64 data URL (asset/inline).
+// Bun resolves the same format via bunfig.toml `loader = { ".wasm" = "dataurl" }`.
+import wasmDataUrl from '../../{{ crate_name }}/pkg/{{ crate_name }}_bg.wasm';
 
 let initialized = false;
 
-function decodeBase64(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
+/**
+ * Extracts raw bytes from a base64 data URL or a bare base64 string.
+ * Both rspack (asset/inline) and bun (dataurl loader) produce data: URLs.
+ */
+function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const commaIdx = dataUrl.indexOf(',');
+  const base64 = commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : dataUrl;
+  return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 }
 
-export function initializeWasm(): void {
-  if (initialized) return;
-  if (wasmMode === 'inline' && wasmBase64) {
-    initSync({ module: decodeBase64(wasmBase64) });
+/**
+ * Synchronously initializes WASM from the inlined binary.
+ *
+ * Grafana's static file server does not serve .wasm files from plugin
+ * directories, so the binary is always bundled inline as a data URL at
+ * build time. Call once before using WASM exports.
+ */
+export function initializeWasm(): boolean {
+  if (initialized) {
+    return true;
+  }
+  try {
+    initSync({ module: dataUrlToBytes(wasmDataUrl) });
     initialized = true;
+    return true;
+  } catch (err) {
+    console.error('[{{ plugin_id }}] WASM init failed:', err);
+    return false;
   }
-}
-
-export async function initializeWasmAsync(): Promise<void> {
-  if (initialized) return;
-  if (wasmMode === 'external') {
-    await initWasm();
-    initialized = true;
-  }
-}
-
-export function getWasmStatus(): string {
-  if (initialized) return `Ready (${wasmMode})`;
-  return wasmMode === 'unavailable' ? 'Unavailable' : 'Not initialized';
 }
 
 export function isWasmReady(): boolean {
   return initialized;
 }
+
+/** Human-readable status for UI (e.g. panel placeholder). */
+export function getWasmStatus(): string {
+  if (initialized) {
+    return 'Ready';
+  }
+  return 'Not initialized';
+}
+
+export { greet };

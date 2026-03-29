@@ -1,0 +1,14 @@
+# @managed by create-grafana-plugin — do not edit
+[test]
+# Preload the happy-dom global registrator before any test files so that
+# browser APIs (window, document, etc.) are available in all tests.
+preload = ["./tests/setup/happydom.ts"]
+# Glob patterns for test discovery
+include = ["tests/**/*.test.{ts,tsx}"]
+{% if has_wasm %}
+
+[loader]
+# Emit .wasm files as base64 data URLs so tests can import them without a
+# separate HTTP fetch — mirrors rspack's `type: "asset/inline"` behaviour.
+".wasm" = "dataurl"
+{% endif %}

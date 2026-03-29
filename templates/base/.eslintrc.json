@@ -1,12 +1,18 @@
 {
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaVersion": 2020,
+    "ecmaVersion": "latest",
     "sourceType": "module",
-    "ecmaFeatures": { "jsx": true },
+    "ecmaFeatures": {
+      "jsx": true
+    },
     "project": "./tsconfig.json"
   },
-  "plugins": ["@typescript-eslint", "react", "react-hooks"],
+  "plugins": [
+    "@typescript-eslint",
+    "react",
+    "react-hooks"
+  ],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
@@ -25,24 +31,70 @@
         "allowTypedFunctionExpressions": true
       }
     ],
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ],
     "@typescript-eslint/strict-boolean-expressions": "warn",
     "@typescript-eslint/no-floating-promises": "error",
     "@typescript-eslint/no-misused-promises": "error",
     "@typescript-eslint/prefer-nullish-coalescing": "warn",
     "@typescript-eslint/prefer-optional-chain": "warn",
     "@typescript-eslint/no-unnecessary-condition": "warn",
-    "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }],
+    "@typescript-eslint/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports"
+      }
+    ],
     "@typescript-eslint/require-await": "warn",
-    "no-console": ["warn", { "allow": ["warn", "error"] }],
-    "eqeqeq": ["error", "always"],
+    "no-console": [
+      "warn",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
+    "eqeqeq": [
+      "error",
+      "always"
+    ],
     "no-var": "error",
     "prefer-const": "error",
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn"
   },
   "settings": {
-    "react": { "version": "detect" }
+    "react": {
+      "version": "detect"
+    }
   },
-  "ignorePatterns": ["dist/", "node_modules/", "*.config.*", "tests/"]
+  "ignorePatterns": [
+    "dist/",
+    "node_modules/",
+    "*.config.*"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "tests/**/*.ts",
+        "tests/**/*.tsx"
+      ],
+      "parserOptions": {
+        "project": "./tsconfig.test.json"
+      },
+      "rules": {
+        "no-console": "off",
+        "react/react-in-jsx-scope": "off",
+        "react-hooks/rules-of-hooks": "off",
+        "react-hooks/exhaustive-deps": "off",
+        "@typescript-eslint/no-floating-promises": "off",
+        "@typescript-eslint/await-thenable": "off"
+      }
+    }
+  ]
 }

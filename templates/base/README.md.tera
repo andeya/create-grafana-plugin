@@ -7,22 +7,22 @@
 ## Development
 
 ```bash
-{{ package_manager }} install
-{{ package_manager }} run dev
+bun install
+bun run dev
 ```
 
 {% if has_wasm %}
 Build the Rust WASM crate:
 
 ```bash
-{{ package_manager }} run build:wasm
+bun run build:wasm
 ```
 
 {% endif %}
 ## Build
 
 ```bash
-{{ package_manager }} run build
+bun run build
 ```
 
 The packaged plugin is emitted under `dist/{{ plugin_id }}/`.
@@ -30,7 +30,7 @@ The packaged plugin is emitted under `dist/{{ plugin_id }}/`.
 ## Verify
 
 ```bash
-{{ package_manager }} run verify
+bun run verify
 ```
 
 {% if has_docker %}
