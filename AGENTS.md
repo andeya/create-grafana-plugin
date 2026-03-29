@@ -14,7 +14,7 @@ This file defines coding standards for AI assistants working on this project.
 - Git commit messages: **English**
 - Code comments: **English**
 - User-facing documentation: **Chinese (Simplified)** unless otherwise specified
-- Comments explain *why*, not *what*
+- Comments explain _why_, not _what_
 
 ## Verification
 
@@ -26,10 +26,10 @@ cargo test --workspace
 
 ## Version bumps
 
-Keep `[workspace.package].version` in `Cargo.toml` in sync with every `package.json` (root and `npm/*`), including `optionalDependencies` in `npm/create-grafana-plugin`.
+Keep `[workspace.package].version` in `Cargo.toml` in sync with every `package.json` (root and `packaging/npm/*`), including `optionalDependencies` in `packaging/npm/create-grafana-plugin`.
 
 ```bash
-npm run bump:patch   # or bump:minor / bump:major
+bun run bump:patch   # or bump:minor / bump:major
 cargo build          # refresh Cargo.lock after version change
 ```
 

@@ -6,7 +6,8 @@
 #   ./scripts/publish-npm.sh
 #
 # Environment:
-#   SKIP_BUILD=1       — skip `cargo`/`cross` builds; use binaries already in npm/*/bin (must exist).
+#   SKIP_BUILD=1       — skip `cargo`/`cross` builds; use binaries already in npm/*/bin (run once
+#                        with a full build first, or rsync packaging/npm then place bins manually).
 #   USE_CROSS=1        — use `cross build` instead of `cargo build` (requires https://github.com/cross-rs/cross).
 #   BUILD_TARGETS=...  — space-separated Rust target triples to build (default: all five).
 #   DRY_RUN=1          — pass `--dry-run` to every `npm publish`.
@@ -22,8 +23,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
+NPM_PACKAGING="${ROOT_DIR}/packaging/npm"
 NPM_MAIN="${ROOT_DIR}/npm/create-grafana-plugin"
 CRATE_BIN_NAME="create-grafana-plugin"
+
+# Merge tracked manifests + shim into gitignored npm/ (preserves existing */bin if present).
+materialize_npm_layout() {
+  mkdir -p "${ROOT_DIR}/npm"
+  rsync -a "${NPM_PACKAGING}/" "${ROOT_DIR}/npm/"
+}
 
 DEFAULT_BUILD_TARGETS=(
   "aarch64-apple-darwin"
@@ -171,6 +179,7 @@ confirm_publish() {
 }
 
 main() {
+  materialize_npm_layout
   assert_same_version_everywhere
   local ver
   ver="$(read_package_version "${NPM_MAIN}")"
