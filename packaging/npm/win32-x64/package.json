@@ -1,0 +1,22 @@
+{
+  "name": "@andeya/create-grafana-plugin-win32-x64",
+  "version": "0.1.1",
+  "description": "Prebuilt create-grafana-plugin binary for Windows (x86_64)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andeya/create-grafana-plugin"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
