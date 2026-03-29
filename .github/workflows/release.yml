@@ -8,8 +8,7 @@
 # Trigger: push a tag v* (e.g. v0.1.0). [workspace.package].version in Cargo.toml must match
 # the tag without the leading v.
 #
-# npm layout (required before first release): npm/create-grafana-plugin/ and npm/<platform>/
-# with package.json — see project design docs.
+# npm publish layout is materialized in CI from packaging/npm/ (tracked) into gitignored npm/.
 
 name: Release
 
@@ -256,6 +255,12 @@ jobs:
               exit 1
             fi
           fi
+
+      - name: Materialize npm/ from packaging/npm
+        run: |
+          set -euo pipefail
+          rm -rf npm
+          cp -R packaging/npm npm
 
       - name: Copy binaries into npm platform packages
         run: |

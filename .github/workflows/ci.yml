@@ -60,3 +60,9 @@ jobs:
 
       - name: Run tests
         run: cargo test --workspace
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Resolve root package.json with Bun
+        run: bun install
