@@ -1,3 +1,9 @@
+tmp-rspack-verify/
+tmp-rspack-wasm-verify/
+
+# Ephemeral npm publish tree at repo root only (not packaging/npm/)
+/npm/
+
 /target/
 cli/target/
 dist/
