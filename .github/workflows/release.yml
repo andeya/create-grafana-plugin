@@ -317,6 +317,13 @@ jobs:
           fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");
           NODE
 
+      - name: Copy README into every npm package
+        run: |
+          set -euo pipefail
+          for dir in npm/darwin-arm64 npm/darwin-x64 npm/linux-x64 npm/linux-arm64 npm/win32-x64 npm/create-grafana-plugin; do
+            cp README.md "${dir}/README.md"
+          done
+
       - name: Publish npm platform packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -331,5 +338,4 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          cp README.md npm/create-grafana-plugin/README.md
           cd npm/create-grafana-plugin && npm publish --access public

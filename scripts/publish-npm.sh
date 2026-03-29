@@ -196,7 +196,13 @@ main() {
     fi
   fi
 
+  # Copy root README into every package so npm shows it
   local suffix
+  for suffix in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
+    cp -f "${ROOT_DIR}/README.md" "${ROOT_DIR}/npm/${suffix}/README.md"
+  done
+  cp -f "${ROOT_DIR}/README.md" "${NPM_MAIN}/README.md"
+
   for suffix in darwin-arm64 darwin-x64 linux-x64 linux-arm64 win32-x64; do
     printf '\n%s\n' "==> Publishing @andeya/create-grafana-plugin-${suffix}"
     npm_publish_dir "${ROOT_DIR}/npm/${suffix}"

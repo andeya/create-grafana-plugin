@@ -7,15 +7,10 @@
     "type": "git",
     "url": "https://github.com/andeya/create-grafana-plugin"
   },
-  "os": [
-    "win32"
-  ],
-  "cpu": [
-    "x64"
-  ],
-  "files": [
-    "bin"
-  ],
+  "keywords": ["grafana", "plugin", "scaffold", "cli"],
+  "os": ["win32"],
+  "cpu": ["x64"],
+  "files": ["bin", "README.md"],
   "publishConfig": {
     "access": "public"
   }
