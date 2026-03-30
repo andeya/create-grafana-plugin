@@ -32,7 +32,7 @@ impl Severity {
 }
 
 /// Rich set of OTel semantic attributes attached to a hop span.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SpanAttrs {
     pub http_method: Option<&'static str>,
     pub http_route: Option<String>,
@@ -42,21 +42,6 @@ pub struct SpanAttrs {
     pub rpc_service: Option<String>,
     pub rpc_method: Option<String>,
     pub error_message: Option<String>,
-}
-
-impl Default for SpanAttrs {
-    fn default() -> Self {
-        Self {
-            http_method: None,
-            http_route: None,
-            http_status_code: None,
-            db_system: None,
-            db_statement: None,
-            rpc_service: None,
-            rpc_method: None,
-            error_message: None,
-        }
-    }
 }
 
 /// A single hop in a distributed trace.
@@ -143,11 +128,11 @@ impl ServiceCallGraph {
                 _ => 5..120,
             };
 
-            let duration_ms_range = if is_errored {
+            let duration_ms_range: Range<u64> = if is_errored {
                 let start = base_range.end;
                 start..start.saturating_mul(3).min(HOP_SLEEP_CAP_MS)
             } else if rng.gen_bool(LATENCY_OUTLIER_PROBABILITY) {
-                let factor = rng.gen_range(3u64..=10);
+                let factor: u64 = rng.gen_range(3..=10);
                 let start = base_range.start.saturating_mul(factor);
                 let end = base_range.end.saturating_mul(factor).min(HOP_SLEEP_CAP_MS);
                 start..end.max(start + 1)
