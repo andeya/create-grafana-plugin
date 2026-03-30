@@ -22,7 +22,10 @@ use metrics::{counter, gauge, histogram};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use openmetrics_exemplars::{serve_openmetrics, ExemplarRegistry};
 use opentelemetry::global;
-use opentelemetry::trace::{SpanContext, SpanId, TraceContextExt, TraceFlags, TraceId, TraceState};
+use opentelemetry::trace::{
+    SpanContext, SpanId, TraceContextExt, TraceFlags, TraceId, TraceState,
+    TracerProvider as _,
+};
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::trace::{RandomIdGenerator, TracerProvider};
@@ -232,6 +235,7 @@ async fn emit_trace(
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let config = Config::from_env();
     let provider = init_tracer(&config.otlp_endpoint)?;
+    let tracer = provider.tracer("otel-mock");
     global::set_tracer_provider(provider.clone());
 
     tracing_subscriber::registry()
@@ -240,7 +244,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .unwrap_or_else(|_| EnvFilter::new("info,tokio=warn")),
         )
         .with(tracing_subscriber::fmt::layer())
-        .with(tracing_opentelemetry::layer())
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .init();
 
     install_prometheus(config.prom_addr)?;
