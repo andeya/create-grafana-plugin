@@ -16,15 +16,15 @@ Scaffold panel, data source, or app plugins with the fastest modern frontend too
 
 ## Why create-grafana-plugin?
 
-| Pain point | How this tool solves it |
-| --- | --- |
-| Grafana's plugin SDK has no official scaffolding tool for custom stacks | Generates a complete, opinionated project in seconds |
-| Setting up Rspack + AMD output for Grafana is non-trivial | Pre-configured `rspack.config.js` with JSDoc types, SWC loader, and AMD externals |
-| Integrating Rust WASM into a Grafana plugin requires manual plumbing | `--wasm` adds a wasm-pack crate, TypeScript bridge, and build scripts automatically |
-| Local development needs Grafana + backends running together | `--docker` provisions Grafana, Prometheus, Tempo, and Loki via Compose |
-| No realistic test data for observability dashboards | `--mock` ships a Rust-based mock generator with correlated multi-service traces, logs, and metrics |
-| Keeping generated boilerplate up-to-date across teams | `update` subcommand refreshes managed files while preserving custom code |
-| Running multiple plugin projects on one machine causes port conflicts | `--port-offset` shifts all Docker host ports by a fixed delta |
+| Pain point                                                              | How this tool solves it                                                                            |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Grafana's plugin SDK has no official scaffolding tool for custom stacks | Generates a complete, opinionated project in seconds                                               |
+| Setting up Rspack + AMD output for Grafana is non-trivial               | Pre-configured `rspack.config.js` with JSDoc types, SWC loader, and AMD externals                  |
+| Integrating Rust WASM into a Grafana plugin requires manual plumbing    | `--wasm` adds a wasm-pack crate, TypeScript bridge, and build scripts automatically                |
+| Local development needs Grafana + backends running together             | `--docker` provisions Grafana, Prometheus, Tempo, and Loki via Compose                             |
+| No realistic test data for observability dashboards                     | `--mock` ships a Rust-based mock generator with correlated multi-service traces, logs, and metrics |
+| Keeping generated boilerplate up-to-date across teams                   | `update` subcommand refreshes managed files while preserving custom code                           |
+| Running multiple plugin projects on one machine causes port conflicts   | `--port-offset` shifts all Docker host ports by a fixed delta                                      |
 
 ## Highlights
 
@@ -157,17 +157,17 @@ npx create-grafana-plugin update --dry-run   # preview diffs without writing
 
 ## Configuration reference (`.grafana-plugin.toml`)
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `name` | string | Plugin name (normalized to kebab-case) |
-| `description` | string | Human-readable description |
-| `author` | string | Author display name |
-| `org` | string | Grafana org segment (plugin id = `org-name`) |
-| `type` | string | `panel`, `datasource`, or `app` |
-| `wasm` | bool | Include Rust WASM workspace and bridge |
-| `docker` | bool | Include Docker Compose + provisioning |
-| `mock` | bool | Include mock data generator (requires `docker`) |
-| `port_offset` | integer | Global host port offset for Docker services |
+| Field         | Type    | Description                                     |
+| ------------- | ------- | ----------------------------------------------- |
+| `name`        | string  | Plugin name (normalized to kebab-case)          |
+| `description` | string  | Human-readable description                      |
+| `author`      | string  | Author display name                             |
+| `org`         | string  | Grafana org segment (plugin id = `org-name`)    |
+| `type`        | string  | `panel`, `datasource`, or `app`                 |
+| `wasm`        | bool    | Include Rust WASM workspace and bridge          |
+| `docker`      | bool    | Include Docker Compose + provisioning           |
+| `mock`        | bool    | Include mock data generator (requires `docker`) |
+| `port_offset` | integer | Global host port offset for Docker services     |
 
 ## Generated project structure
 
@@ -212,23 +212,23 @@ Plugin type determines `src/` contents: panel gets `MainPanel.tsx`, datasource g
 
 ### Scaffold (default command)
 
-| Option | Description |
-| --- | --- |
-| `--name <NAME>` | Plugin name (kebab-case) |
-| `--description <TEXT>` | Plugin description |
-| `--author <NAME>` | Author name |
-| `--org <ORG>` | Organization segment for plugin id |
-| `--type <TYPE>` | `panel`, `datasource`, or `app` |
-| `--wasm` | Include Rust WASM crate and bridge |
-| `--docker` | Include Docker-based dev environment |
-| `--mock` | Include mock data generator (requires `--docker`) |
-| `--port-offset <N>` | Shift all Docker host ports by N |
-| `--config <FILE>` | Load settings from a TOML file |
+| Option                 | Description                                       |
+| ---------------------- | ------------------------------------------------- |
+| `--name <NAME>`        | Plugin name (kebab-case)                          |
+| `--description <TEXT>` | Plugin description                                |
+| `--author <NAME>`      | Author name                                       |
+| `--org <ORG>`          | Organization segment for plugin id                |
+| `--type <TYPE>`        | `panel`, `datasource`, or `app`                   |
+| `--wasm`               | Include Rust WASM crate and bridge                |
+| `--docker`             | Include Docker-based dev environment              |
+| `--mock`               | Include mock data generator (requires `--docker`) |
+| `--port-offset <N>`    | Shift all Docker host ports by N                  |
+| `--config <FILE>`      | Load settings from a TOML file                    |
 
 ### `update` subcommand
 
-| Option | Description |
-| --- | --- |
+| Option      | Description                              |
+| ----------- | ---------------------------------------- |
 | `--dry-run` | Show diffs and new files without writing |
 
 Built-in: `-h` / `--help`, `-V` / `--version`.

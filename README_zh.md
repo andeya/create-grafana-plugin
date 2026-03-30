@@ -16,15 +16,15 @@
 
 ## 为什么选择 create-grafana-plugin？
 
-| 痛点 | 解决方式 |
-| --- | --- |
-| Grafana 官方无针对自定义技术栈的脚手架工具 | 秒级生成完整、有观点的项目 |
-| Rspack + AMD 输出配置复杂 | 预置 `rspack.config.js`，JSDoc 类型 + SWC + AMD externals 开箱即用 |
-| Rust WASM 集成到 Grafana 插件需大量手工接线 | `--wasm` 自动添加 wasm-pack crate、TypeScript 桥接及构建脚本 |
-| 本地开发需要 Grafana 与后端服务协同运行 | `--docker` 一键编排 Grafana、Prometheus、Tempo、Loki |
-| 可观测仪表盘缺少真实测试数据 | `--mock` 提供 Rust 实现的多服务分布式链路 + 关联日志 + Prometheus 指标生成器 |
-| 团队间模板同步困难 | `update` 子命令按模板刷新受管理文件，自定义代码不受影响 |
-| 多插件项目同时运行端口冲突 | `--port-offset` 全局偏移所有 Docker 宿主端口 |
+| 痛点                                        | 解决方式                                                                     |
+| ------------------------------------------- | ---------------------------------------------------------------------------- |
+| Grafana 官方无针对自定义技术栈的脚手架工具  | 秒级生成完整、有观点的项目                                                   |
+| Rspack + AMD 输出配置复杂                   | 预置 `rspack.config.js`，JSDoc 类型 + SWC + AMD externals 开箱即用           |
+| Rust WASM 集成到 Grafana 插件需大量手工接线 | `--wasm` 自动添加 wasm-pack crate、TypeScript 桥接及构建脚本                 |
+| 本地开发需要 Grafana 与后端服务协同运行     | `--docker` 一键编排 Grafana、Prometheus、Tempo、Loki                         |
+| 可观测仪表盘缺少真实测试数据                | `--mock` 提供 Rust 实现的多服务分布式链路 + 关联日志 + Prometheus 指标生成器 |
+| 团队间模板同步困难                          | `update` 子命令按模板刷新受管理文件，自定义代码不受影响                      |
+| 多插件项目同时运行端口冲突                  | `--port-offset` 全局偏移所有 Docker 宿主端口                                 |
 
 ## 亮点
 
@@ -157,17 +157,17 @@ npx create-grafana-plugin update --dry-run   # 预览差异，不写盘
 
 ## 配置参考（`.grafana-plugin.toml`）
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `name` | string | 插件名称（规范为 kebab-case） |
-| `description` | string | 描述 |
-| `author` | string | 作者显示名 |
-| `org` | string | Grafana 组织段（插件 id = `org-name`） |
-| `type` | string | `panel`、`datasource` 或 `app` |
-| `wasm` | bool | 是否包含 Rust WASM 工作区与桥接 |
-| `docker` | bool | 是否包含 Docker Compose + provisioning |
-| `mock` | bool | 是否包含 Mock 数据生成器（须启用 `docker`） |
-| `port_offset` | integer | Docker 服务全局宿主端口偏移量 |
+| 字段          | 类型    | 说明                                        |
+| ------------- | ------- | ------------------------------------------- |
+| `name`        | string  | 插件名称（规范为 kebab-case）               |
+| `description` | string  | 描述                                        |
+| `author`      | string  | 作者显示名                                  |
+| `org`         | string  | Grafana 组织段（插件 id = `org-name`）      |
+| `type`        | string  | `panel`、`datasource` 或 `app`              |
+| `wasm`        | bool    | 是否包含 Rust WASM 工作区与桥接             |
+| `docker`      | bool    | 是否包含 Docker Compose + provisioning      |
+| `mock`        | bool    | 是否包含 Mock 数据生成器（须启用 `docker`） |
+| `port_offset` | integer | Docker 服务全局宿主端口偏移量               |
 
 ## 生成项目结构
 
@@ -212,23 +212,23 @@ my-plugin/
 
 ### 搭建（默认命令）
 
-| 选项 | 说明 |
-| --- | --- |
-| `--name <NAME>` | 插件名称（kebab-case） |
-| `--description <TEXT>` | 插件描述 |
-| `--author <NAME>` | 作者名 |
-| `--org <ORG>` | 插件 id 中的组织段 |
-| `--type <TYPE>` | `panel`、`datasource` 或 `app` |
-| `--wasm` | 包含 Rust WASM crate 与桥接 |
-| `--docker` | 包含基于 Docker 的开发环境 |
-| `--mock` | 包含 Mock 数据生成器（须同时 `--docker`） |
-| `--port-offset <N>` | 全局偏移所有 Docker 宿主端口 |
-| `--config <FILE>` | 从 TOML 加载配置 |
+| 选项                   | 说明                                      |
+| ---------------------- | ----------------------------------------- |
+| `--name <NAME>`        | 插件名称（kebab-case）                    |
+| `--description <TEXT>` | 插件描述                                  |
+| `--author <NAME>`      | 作者名                                    |
+| `--org <ORG>`          | 插件 id 中的组织段                        |
+| `--type <TYPE>`        | `panel`、`datasource` 或 `app`            |
+| `--wasm`               | 包含 Rust WASM crate 与桥接               |
+| `--docker`             | 包含基于 Docker 的开发环境                |
+| `--mock`               | 包含 Mock 数据生成器（须同时 `--docker`） |
+| `--port-offset <N>`    | 全局偏移所有 Docker 宿主端口              |
+| `--config <FILE>`      | 从 TOML 加载配置                          |
 
 ### `update` 子命令
 
-| 选项 | 说明 |
-| --- | --- |
+| 选项        | 说明                       |
+| ----------- | -------------------------- |
 | `--dry-run` | 仅显示差异与新文件，不写盘 |
 
 内置：`-h` / `--help`，`-V` / `--version`。
