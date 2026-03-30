@@ -1,9 +1,9 @@
 // @managed by create-grafana-plugin — do not edit
-{% if has_wasm %}
+{%- if has_wasm %}
 import { initializeWasm } from './services/wasm-bridge';
 
 initializeWasm();
-{% endif %}
+{%- endif %}
 import { DataSourcePlugin } from '@grafana/data';
 import { {{ pascal_case_name }}DataSource } from './datasource';
 import { ConfigEditor } from './components/ConfigEditor';

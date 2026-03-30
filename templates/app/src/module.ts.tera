@@ -1,9 +1,9 @@
 // @managed by create-grafana-plugin — do not edit
-{% if has_wasm %}
+{%- if has_wasm %}
 import { initializeWasm } from './services/wasm-bridge';
 
 initializeWasm();
-{% endif %}
+{%- endif %}
 import { AppPlugin } from '@grafana/data';
 import { AppConfig } from './components/AppConfig';
 import { AppRootPage } from './components/AppRootPage';
