@@ -107,7 +107,8 @@ fn record_trace_metrics(plan: &TracePlan) {
         let duration_s = plan.hop_sleep_ms[i] as f64 / 1000.0;
         let status = if hop.severity == Severity::Error { "error" } else { "ok" };
 
-        counter!("otel_mock_http_requests_total", "service" => svc, "status" => status).increment(1);
+        counter!("otel_mock_http_requests_total", "service" => svc, "status" => status)
+            .increment(1);
         histogram!("otel_mock_http_request_duration_seconds", "service" => svc).record(duration_s);
 
         if let Some(ref msg) = hop.attrs.error_message {
