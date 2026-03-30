@@ -41,9 +41,7 @@ const INCREMENTS = ['major', 'minor', 'patch'] as const;
 
 function readCargoVersion(): string {
   const content = readFileSync(CARGO_TOML, 'utf8');
-  const match = content.match(
-    /\[workspace\.package\][\s\S]*?version\s*=\s*"([^"]+)"/,
-  );
+  const match = content.match(/\[workspace\.package\][\s\S]*?version\s*=\s*"([^"]+)"/);
   if (!match) {
     throw new Error('Could not find [workspace.package] version in Cargo.toml');
   }

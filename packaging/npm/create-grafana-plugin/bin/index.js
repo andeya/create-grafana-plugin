@@ -2,11 +2,11 @@
 /**
  * Resolves the platform-specific optional dependency and runs the native binary.
  */
-"use strict";
+'use strict';
 
-const { spawnSync } = require("node:child_process");
-const fs = require("node:fs");
-const path = require("node:path");
+const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
 
 /**
  * @returns {string | null}
@@ -14,20 +14,20 @@ const path = require("node:path");
 function platformPackageName() {
   const platform = process.platform;
   const arch = process.arch;
-  if (platform === "darwin" && arch === "arm64") {
-    return "@andeya/create-grafana-plugin-darwin-arm64";
+  if (platform === 'darwin' && arch === 'arm64') {
+    return '@andeya/create-grafana-plugin-darwin-arm64';
   }
-  if (platform === "darwin" && arch === "x64") {
-    return "@andeya/create-grafana-plugin-darwin-x64";
+  if (platform === 'darwin' && arch === 'x64') {
+    return '@andeya/create-grafana-plugin-darwin-x64';
   }
-  if (platform === "linux" && arch === "x64") {
-    return "@andeya/create-grafana-plugin-linux-x64";
+  if (platform === 'linux' && arch === 'x64') {
+    return '@andeya/create-grafana-plugin-linux-x64';
   }
-  if (platform === "linux" && arch === "arm64") {
-    return "@andeya/create-grafana-plugin-linux-arm64";
+  if (platform === 'linux' && arch === 'arm64') {
+    return '@andeya/create-grafana-plugin-linux-arm64';
   }
-  if (platform === "win32" && arch === "x64") {
-    return "@andeya/create-grafana-plugin-win32-x64";
+  if (platform === 'win32' && arch === 'x64') {
+    return '@andeya/create-grafana-plugin-win32-x64';
   }
   return null;
 }
@@ -47,14 +47,14 @@ function main() {
   } catch {
     console.error(
       `create-grafana-plugin: missing platform package ${pkgName}. ` +
-        "Reinstall create-grafana-plugin so optional dependencies can be fetched.",
+        'Reinstall create-grafana-plugin so optional dependencies can be fetched.',
     );
     process.exit(1);
   }
 
   const binaryName =
-    process.platform === "win32" ? "create-grafana-plugin.exe" : "create-grafana-plugin";
-  const binaryPath = path.join(pkgRoot, "bin", binaryName);
+    process.platform === 'win32' ? 'create-grafana-plugin.exe' : 'create-grafana-plugin';
+  const binaryPath = path.join(pkgRoot, 'bin', binaryName);
 
   if (!fs.existsSync(binaryPath)) {
     console.error(`create-grafana-plugin: binary not found at ${binaryPath}`);
@@ -62,7 +62,7 @@ function main() {
   }
 
   const result = spawnSync(binaryPath, process.argv.slice(2), {
-    stdio: "inherit",
+    stdio: 'inherit',
     windowsHide: true,
   });
 
