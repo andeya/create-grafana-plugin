@@ -26,8 +26,7 @@ const KNOWN_MANAGED_JSON_RELS: &[&str] = &[
     "package.json",
     "tsconfig.json",
     "tsconfig.test.json",
-    ".eslintrc.json",
-    ".prettierrc",
+    "biome.json",
 ];
 
 /// Run update in the current directory (expects a scaffolded project).
@@ -309,7 +308,7 @@ mod tests {
     #[test]
     fn detects_json_paths() {
         assert!(is_known_json_managed_path(Path::new("plugin.json")));
-        assert!(is_known_json_managed_path(Path::new(".eslintrc.json")));
+        assert!(is_known_json_managed_path(Path::new("biome.json")));
         assert!(!is_known_json_managed_path(Path::new("src/foo.json")));
     }
 
