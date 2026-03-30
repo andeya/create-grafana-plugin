@@ -12,17 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-{% if has_wasm %}
+{%- if has_wasm %}
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
       - run: cargo install wasm-pack --locked
-{% endif %}
+{%- endif %}
       - run: bun install
-{% if has_wasm %}
+{%- if has_wasm %}
       - run: bun run build:wasm
-{% endif %}
+{%- endif %}
       - run: bun run lint
       - run: bun run test
 
@@ -32,12 +32,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-{% if has_wasm %}
+{%- if has_wasm %}
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
       - run: cargo install wasm-pack --locked
-{% endif %}
+{%- endif %}
       - run: bun install
       - run: bun run build
       - uses: actions/upload-artifact@v4

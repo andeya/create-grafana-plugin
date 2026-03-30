@@ -3,11 +3,13 @@ node_modules/
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+{%- if has_wasm %}
 
-{% if has_wasm %}/target/
+/target/
 {{ crate_name }}/target/
 {{ crate_name }}/pkg/
-{% endif %}
+{%- endif %}
+
 /dist/
 
 .idea/
