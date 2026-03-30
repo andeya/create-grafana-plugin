@@ -60,6 +60,7 @@
 {%- if has_wasm %}
     "format:check:rust": "cargo fmt --all -- --check",
 {%- endif %}
+    "package": "bun run build && cd dist && tar czf {{ plugin_id }}.tar.gz {{ plugin_id }}/",
     "verify": "bun run lint && bun run test && bun run build",
     "bump": "bun scripts/bump-version.ts",
     "bump:patch": "bun scripts/bump-version.ts patch",
