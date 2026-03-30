@@ -56,6 +56,24 @@ pub fn generate(config: &ProjectConfig) -> Result<PathBuf> {
     std::fs::write(&version_marker, env!("CARGO_PKG_VERSION"))
         .context("Failed to write version marker")?;
 
+    // Format generated files with Biome before git init so the initial commit is clean.
+    print!("  {} Formatting generated files...", "⟳".cyan().bold());
+    let fmt_ok = Command::new("bunx")
+        .args(["@biomejs/biome", "format", "--write", "."])
+        .current_dir(&output_dir)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success());
+    if fmt_ok {
+        println!("\r  {} Formatted generated files   ", "✓".green().bold());
+    } else {
+        println!(
+            "\r  {} Formatting skipped (install bun to enable)",
+            "⚠".yellow().bold()
+        );
+    }
+
     if let Ok(output) = Command::new("git")
         .arg("init")
         .current_dir(&output_dir)
