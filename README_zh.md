@@ -1,18 +1,38 @@
 # create-grafana-plugin
 
-**用于搭建可投入生产的 Grafana 插件项目** —— 基于 Rspack 的前端构建（Grafana AMD 输出）、可选的 Rust WASM、Docker 开发环境、Mock 数据工具，以及生成项目统一使用 **Bun**（安装、测试、构建脚本）。提供 `update` 子命令，用于将已有项目与最新模板对齐。
+**一条命令，生成可投产的 Grafana 插件项目。**
+
+支持 Panel、Data Source、App 三种插件类型，搭配最快的现代前端工具链 —— **Rspack** 构建、**Bun** 运行时、**Biome** 格式化与代码检查；可选 **Rust WASM** 提供浏览器原生性能，可选 **Docker 全链路可观测栈**（Grafana + Prometheus + Tempo + Loki），以及可选的 **Mock 遥测数据生成器**（开箱即用的关联 traces、logs、metrics）。
 
 [English](README.md) · **中文**
 
-## 特性
+---
 
-- **插件类型**：Panel、数据源（datasource）、应用（app）插件 —— 按 Grafana 插件模型选择合适形态。
-- **可选 Rust WASM**：提供 wasm-pack 就绪的 crate 与 TypeScript 桥接，在浏览器中获得接近原生的性能。
-- **Docker 开发环境**：可选 Compose 编排，统一 Grafana + 插件开发体验。
-- **Mock 数据生成器**：可选 `otel-mock` 服务（通常与 Docker 工作流配合使用）。
-- **Bun**：生成的插件项目使用 **Bun**（`packageManager`、`bun test`、`bun run build`、TypeScript 工具脚本）。
-- **非交互与配置文件**：通过命令行参数或 `.grafana-plugin.toml` 便于 CI 与可重复搭建。
-- **update 子命令**：在已有项目中按当前工具版本刷新「受管理」文件，支持 `--dry-run` 预览差异。
+## 为什么选择 create-grafana-plugin？
+
+| 痛点 | 解决方式 |
+| --- | --- |
+| Grafana 官方无针对自定义技术栈的脚手架工具 | 秒级生成完整、有观点的项目 |
+| Rspack + AMD 输出配置复杂 | 预置 `rspack.config.js`，JSDoc 类型 + SWC + AMD externals 开箱即用 |
+| Rust WASM 集成到 Grafana 插件需大量手工接线 | `--wasm` 自动添加 wasm-pack crate、TypeScript 桥接及构建脚本 |
+| 本地开发需要 Grafana 与后端服务协同运行 | `--docker` 一键编排 Grafana、Prometheus、Tempo、Loki |
+| 可观测仪表盘缺少真实测试数据 | `--mock` 提供 Rust 实现的多服务分布式链路 + 关联日志 + Prometheus 指标生成器 |
+| 团队间模板同步困难 | `update` 子命令按模板刷新受管理文件，自定义代码不受影响 |
+| 多插件项目同时运行端口冲突 | `--port-offset` 全局偏移所有 Docker 宿主端口 |
+
+## 亮点
+
+- **Rust 驱动的 CLI** —— 单一静态二进制，毫秒级启动，跨平台（macOS、Linux、Windows）。
+- **同类最快工具链** —— Rspack（Rust 打包器）、Bun（运行时 + 测试）、Biome（Rust 格式化/检查）。无 webpack、无 Jest、无 Prettier。
+- **三种插件类型** —— Panel、Data Source、App，各自携带专属组件、类型定义与入口。
+- **可选 Rust → WASM** —— wasm-pack crate、TypeScript 桥接（`wasm-bridge.ts`）、Cargo 工作区，适合浏览器端计算密集型逻辑。
+- **完整可观测开发栈** —— Docker Compose 编排 Grafana、Prometheus、Tempo、Loki，数据源自动配置，项目级网络隔离。
+- **生产级 Mock 数据** —— `otel-mock` 生成逼真的多服务分布式链路（OTLP → Tempo）、关联 JSON 日志（→ Loki）、可被 Prometheus 抓取的指标，支持配置心跳间隔。
+- **端口隔离** —— `--port-offset N` 将所有宿主端口偏移 N（如 `--port-offset 100` → Grafana 3100、Prometheus 9190）。
+- **配置驱动** —— 交互提示、CLI 参数或 `.grafana-plugin.toml` 文件，对 CI 友好。
+- **智能更新** —— `create-grafana-plugin update` 将受管理文件与最新模板 diff；`--dry-run` 预览变更。
+- **生成即规范** —— 脚手架后自动执行 Biome 和 `cargo fmt`，输出代码零 lint 错误。
+- **CI 开箱即用** —— 每个生成项目附带 GitHub Actions（lint + test + build）。
 
 ## 快速开始
 
@@ -20,25 +40,45 @@
 npx create-grafana-plugin@latest
 ```
 
-按提示输入插件名称、类型、是否包含 WASM、Docker、Mock 数据（启用 Docker 时）。工具会创建与插件同名的目录并输出后续步骤（`cd`、`bun install` 或 `bun run setup`、构建、可选 `docker compose up`）。
+按提示操作 —— 或完全非交互：
+
+```bash
+npx create-grafana-plugin \
+  --name my-dashboard \
+  --type panel \
+  --org acme \
+  --author "Jane Doe" \
+  --wasm \
+  --docker \
+  --mock
+```
+
+然后：
+
+```bash
+cd my-dashboard
+bun run setup        # 安装依赖 + 构建 WASM（如启用）
+docker compose up -d # 启动 Grafana + 后端（如 --docker）
+bun run dev          # Rspack watch 模式
+```
+
+打开 `http://localhost:3000` —— 数据源、插件、Mock 数据均已预配置就绪。
 
 ## 安装
 
-### crates.io
-
-```bash
-cargo install create-grafana-plugin
-```
-
-将 `~/.cargo/bin` 加入 `PATH` 后，直接运行 `create-grafana-plugin`。
-
-### npm（npx）
+### npm（推荐）
 
 ```bash
 npx create-grafana-plugin@latest
 ```
 
-npm 包会调用同一 CLI；无需全局安装 Rust 即可用 `npx` 单次执行。
+只需 Node/Bun 即可，npm 包会自动拉取对应平台的原生二进制。
+
+### Cargo（Rust）
+
+```bash
+cargo install create-grafana-plugin
+```
 
 ### 从源码安装
 
@@ -48,90 +88,37 @@ cd create-grafana-plugin
 cargo install --path cli
 ```
 
-从工作区中的 `cli` crate 构建并安装 `create-grafana-plugin` 二进制。
-
 ## 用法
 
 ### 交互模式
-
-在未提供非交互所需参数时直接运行：
 
 ```bash
 npx create-grafana-plugin
 ```
 
-将依次提示：插件名称、描述、作者、组织、插件类型、WASM、Docker、Mock（在启用 Docker 时）。
+依次提示：插件名称、描述、作者、组织、类型、WASM、Docker、Mock 数据。
 
 ### 非交互模式
 
-提供 **name**、**type**、**author**、**org** 可跳过提示：
+提供 `--name`、`--type`、`--author`、`--org` 即可跳过所有提示：
 
 ```bash
 npx create-grafana-plugin \
   --name my-plugin \
-  --type panel \
+  --type datasource \
   --org myorg \
   --author "Your Name" \
-  --description "My Grafana panel"
+  --description "实时指标数据源" \
+  --docker \
+  --mock \
+  --port-offset 200
 ```
 
-可选参数：`--wasm`、`--docker`、`--mock`（`--mock` 须同时指定 `--docker`）。
-
-### 同时启用 WASM 与 Docker
-
-```bash
-npx create-grafana-plugin \
-  --name my-plugin \
-  --type panel \
-  --org myorg \
-  --author "Your Name" \
-  --wasm \
-  --docker
-```
-
-仅在启用 Docker 且设置 `--mock`（或在交互流程中选择）时才会包含 Mock 数据相关文件。
-
-### 使用配置文件代替冗长参数
+### 配置文件
 
 ```bash
 npx create-grafana-plugin --config .grafana-plugin.toml
 ```
-
-### 更新已有项目
-
-在**此前由本工具生成**的项目根目录（存在 `plugin.json`、`package.json`）下执行：
-
-```bash
-cd my-plugin
-npx create-grafana-plugin update
-```
-
-更新器会从 `plugin.json`、`package.json` 以及目录结构（如是否存在 `Cargo.toml`、`docker-compose.yml`、`otel-mock/`）推断插件类型、组织、名称及 WASM/Docker/Mock。仅覆盖**受管理**的文件（生成代码中带标记，或属于已知的 JSON 管理路径）；其余文件不覆盖或跳过。
-
-### 预演更新（dry run）
-
-```bash
-npx create-grafana-plugin update --dry-run
-```
-
-打印差异与将创建的新文件，不写入磁盘。
-
-## 配置文件（`.grafana-plugin.toml`）
-
-使用 TOML 驱动搭建，避免超长命令行。通过 `--config <路径>` 指定。
-
-| 字段          | 类型   | 说明                                                                       |
-| ------------- | ------ | -------------------------------------------------------------------------- |
-| `name`        | string | 插件名称（规范为 kebab-case）。                                            |
-| `description` | string | 描述。                                                                     |
-| `author`      | string | 作者显示名。                                                               |
-| `org`         | string | Grafana 插件 id 中的组织段（完整 id：`org-name`）。                        |
-| `type`        | string | `panel`、`datasource` 或 `app`（`data-source` 可作为 datasource 的别名）。 |
-| `wasm`        | bool   | 是否包含 Rust WASM 工作区与桥接代码。                                      |
-| `docker`      | bool   | 是否包含 Docker Compose 与 provisioning。                                  |
-| `mock`        | bool   | 是否包含 Mock 数据生成器（通常与 Docker 一起使用）。                       |
-
-示例：
 
 ```toml
 name = "my-org-panel"
@@ -142,115 +129,139 @@ type = "panel"
 wasm = true
 docker = true
 mock = true
+port_offset = 100
 ```
 
-合并规则上，部分 CLI 参数会覆盖 TOML（例如 `--wasm` 会强制启用 WASM）。生成后的项目**运行时不依赖**该文件；它仅作为 `create` 流程的可选输入。
+CLI 参数覆盖 TOML 值。生成后的项目**运行时不依赖**该文件。
+
+### 更新已有项目
+
+```bash
+cd my-plugin
+npx create-grafana-plugin update
+```
+
+更新器从 `plugin.json`、`package.json` 及目录结构自动推断插件类型、组织、WASM/Docker/Mock 布局与端口偏移。仅覆盖 **受管理** 文件（带 `@managed` 标记），自定义代码不受影响。
+
+```bash
+npx create-grafana-plugin update --dry-run   # 预览差异，不写盘
+```
+
+## 配置参考（`.grafana-plugin.toml`）
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `name` | string | 插件名称（规范为 kebab-case） |
+| `description` | string | 描述 |
+| `author` | string | 作者显示名 |
+| `org` | string | Grafana 组织段（插件 id = `org-name`） |
+| `type` | string | `panel`、`datasource` 或 `app` |
+| `wasm` | bool | 是否包含 Rust WASM 工作区与桥接 |
+| `docker` | bool | 是否包含 Docker Compose + provisioning |
+| `mock` | bool | 是否包含 Mock 数据生成器（须启用 `docker`） |
+| `port_offset` | integer | Docker 服务全局宿主端口偏移量 |
 
 ## 生成项目结构
 
-随插件类型与选项变化。以下为启用 **panel + WASM + Docker + Mock** 时的大致结构：
+以 **Panel 插件 + WASM + Docker + Mock** 为例：
 
 ```text
 my-plugin/
-├── .github/workflows/ci.yml
-├── .grafana-plugin-version      # 记录 scaffold / update 工具版本
-├── Cargo.toml                   # WASM 工作区
-├── docker-compose.yml           # Docker 选项
-├── docker/provisioning/         # Prometheus、Loki、Tempo、数据源、插件等
-├── otel-mock/                   # Mock 选项（配合 Docker）
-├── scripts/
+├── .github/workflows/ci.yml       # lint + test + build
+├── .grafana-plugin-version         # 脚手架工具版本
+├── biome.json                      # Biome 配置（格式化 + 检查）
+├── bunfig.toml                     # Bun 配置
+├── Cargo.toml                      # Rust 工作区（--wasm 时）
+├── docker-compose.yml              # Grafana + Prometheus + Tempo + Loki
+├── provisioning/                   # 自动配置的数据源与服务
+├── otel-mock/                      # Rust Mock 遥测数据生成器
+│   └── src/
+│       ├── main.rs                 # OTLP traces + Loki logs + Prometheus metrics
+│       ├── graph.rs                # 合成多服务调用图
+│       └── loki_push.rs            # Loki push API 客户端
 ├── src/
-│   ├── components/MainPanel.tsx
-│   ├── module.ts
-│   ├── types/index.ts
-│   └── services/wasm-bridge.ts  # WASM 选项
-├── my_plugin/                   # Rust crate 目录（由插件名推导）
-│   └── src/lib.rs
-├── plugin.json
-├── package.json
+│   ├── components/MainPanel.tsx    # 插件 UI
+│   ├── module.ts                   # Grafana 入口
+│   ├── types/index.ts              # 共享类型
+│   └── services/wasm-bridge.ts     # WASM 桥接（--wasm 时）
+├── my_plugin/src/lib.rs            # Rust WASM crate（--wasm 时）
+├── scripts/
+│   ├── bump-version.ts             # semver 版本升级工具
+│   └── clean-plugin-dist.ts        # dist 清理
+├── tests/                          # Bun 测试套件
+├── plugin.json                     # Grafana 插件清单
+├── package.json                    # Bun 脚本
 ├── tsconfig.json
-├── tsconfig.test.json
-├── rspack.config.js
-├── bunfig.toml
-├── tests/
+├── rspack.config.js                # Rspack（Grafana AMD 输出）
 ├── README.md
-└── AGENTS.md
+└── AGENTS.md                       # AI 编码规范
 ```
 
-数据源与应用插件会替换为各自特有的 `src/` 文件（如查询编辑器、应用页面）。未选 WASM 则无 Rust 工作区与 `wasm-bridge`；未选 Docker 则无 `docker-compose.yml`、`docker/`、`otel-mock/`。
-
-## 模板定制
-
-本仓库在 `templates/` 下提供 **Tera** 模板（`base`、`panel`、`datasource`、`app`、`wasm`、`docker`、`mock`）。带 `.tera` 后缀的文件参与渲染；二进制资源原样复制。
-
-- **Fork 或 vendor** 本仓库以修改默认依赖、目录布局或脚手架内容。
-- **上下文变量**（如 `plugin_name`、`org`、`plugin_id`、`crate_name`、`has_wasm`）由 CLI 中的 `TemplateContext` 填充。
-- **更新机制**：受管理的生成文件带有标记（例如 `// @managed by create-grafana-plugin — do not edit`），以便 `create-grafana-plugin update` 安全合并模板变更。自定义逻辑建议放在未标记的文件中，否则更新时可能被跳过或无法覆盖。
+插件类型决定 `src/` 内容：Panel → `MainPanel.tsx`，DataSource → `QueryEditor.tsx` + `ConfigEditor.tsx` + `DataSource.ts`，App → `AppRootPage.tsx` + `AppConfig.tsx`。
 
 ## CLI 参考
 
-搭建（主命令）全局选项：
+### 搭建（默认命令）
 
-| 选项                   | 说明                                                   |
-| ---------------------- | ------------------------------------------------------ |
-| `--name <NAME>`        | 插件名称（kebab-case）。                               |
-| `--description <TEXT>` | 插件描述。                                             |
-| `--author <NAME>`      | 作者名。                                               |
-| `--org <ORG>`          | 插件 id 中的组织段。                                   |
-| `--type <TYPE>`        | `panel`、`datasource` 或 `app`。                       |
-| `--wasm`               | 包含 Rust WASM crate 与桥接。                          |
-| `--docker`             | 包含基于 Docker 的开发环境。                           |
-| `--mock`               | 包含 Mock 数据生成器（在 scaffold 中与 Docker 配合）。 |
-| `--config <FILE>`      | 从 TOML 加载配置。                                     |
+| 选项 | 说明 |
+| --- | --- |
+| `--name <NAME>` | 插件名称（kebab-case） |
+| `--description <TEXT>` | 插件描述 |
+| `--author <NAME>` | 作者名 |
+| `--org <ORG>` | 插件 id 中的组织段 |
+| `--type <TYPE>` | `panel`、`datasource` 或 `app` |
+| `--wasm` | 包含 Rust WASM crate 与桥接 |
+| `--docker` | 包含基于 Docker 的开发环境 |
+| `--mock` | 包含 Mock 数据生成器（须同时 `--docker`） |
+| `--port-offset <N>` | 全局偏移所有 Docker 宿主端口 |
+| `--config <FILE>` | 从 TOML 加载配置 |
 
-`update` 子命令：
+### `update` 子命令
 
-| 选项        | 说明                         |
-| ----------- | ---------------------------- |
-| `--dry-run` | 仅显示差异与新文件，不写盘。 |
+| 选项 | 说明 |
+| --- | --- |
+| `--dry-run` | 仅显示差异与新文件，不写盘 |
 
 内置：`-h` / `--help`，`-V` / `--version`。
 
-**非交互搭建**须同时提供 `--name`、`--type`、`--author`、`--org`。若缺少任一字段，将进入交互模式（在提示信息足够的前提下）。
+## 模板定制
 
-## 开发
+模板位于 `templates/` 下，使用 [Tera](https://keats.github.io/tera/) 引擎（Jinja2 风格语法）。模板栈：`base`、`panel`、`datasource`、`app`、`wasm`、`docker`、`mock`。
+
+- **Fork 或 vendor** 本仓库以修改默认依赖、目录布局或脚手架内容。
+- **上下文变量**：`plugin_name`、`org`、`plugin_id`、`crate_name`、`has_wasm`、`has_docker`、`has_mock`、`port_offset` 等。详见 [`TemplateContext`](cli/src/template.rs)。
+- **受管理标记**：生成文件中的 `@managed by create-grafana-plugin — do not edit` 标记确保 `update` 命令可安全合并模板变更。
+
+## 开发（本仓库）
 
 ```bash
-bun run fmt          # 格式化所有 Rust 代码（cargo fmt）
-bun run lint         # 检查格式 + clippy 警告
-bun run test         # 运行所有测试（cargo test）
-bun run verify       # lint + test 一步到位
+bun run fmt          # cargo fmt
+bun run lint         # clippy + Biome
+bun run test         # cargo test --workspace
+bun run verify       # fmt + lint + test
 ```
 
 ## 版本号
 
-Rust crate 与 npm 包共用同一套 semver。版本号唯一真实来源为根目录 `Cargo.toml` 的 `[workspace.package] version`。一键同步所有位置：
+Rust crate 与 npm 包共享统一 semver，唯一真实来源为 `Cargo.toml` 中的 `[workspace.package] version`。
 
 ```bash
-bun run bump:patch          # 0.1.0 → 0.1.1
-bun run bump:minor          # 0.1.0 → 0.2.0
-bun run bump:major          # 0.1.0 → 1.0.0
-bun run bump -- 2.0.0       # 直接指定版本号
+bun run bump:patch   # 0.1.0 → 0.1.1
+bun run bump:minor   # 0.1.0 → 0.2.0
+bun run bump:major   # 0.1.0 → 1.0.0
 ```
 
-该命令会同时更新 `Cargo.toml`、根 `package.json`、所有 npm 平台包以及 meta 包中的 `optionalDependencies` 版本。
-
-发布时提交版本变更后，推送 Git 标签 `vX.Y.Z`，其数字部分须与 `Cargo.toml` 中版本一致（见 `.github/workflows/release.yml`）。维护说明见 [`AGENTS.md`](AGENTS.md)。
+发布：提交后推送 `vX.Y.Z` 标签，GitHub Actions 自动完成 crates.io + npm 发布。
 
 ## 参与贡献
 
 欢迎贡献。
 
 1. 较大改动建议先开 issue 对齐范围。
-2. 提交保持原子化；**提交说明请使用英文**。
-3. 提交 PR 前请执行：
-
-   ```bash
-   bun run verify
-   ```
-
+2. 提交说明与代码注释使用 **英文**。
+3. 提交 PR 前请执行 `bun run verify`。
 4. 模板与 CLI 行为请与现有风格一致；行为变更时请补充或更新测试。
 
 ## 许可证
 
-本项目使用 [MIT License](LICENSE) 授权。
+[MIT](LICENSE)

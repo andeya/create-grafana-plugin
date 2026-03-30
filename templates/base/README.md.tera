@@ -4,20 +4,49 @@
 
 {{ plugin_description }}
 
-## Development
+> Scaffolded with [create-grafana-plugin](https://github.com/andeya/create-grafana-plugin) — Rspack · Bun · Biome{% if has_wasm %} · Rust WASM{% endif %}{% if has_docker %} · Docker{% endif %}
+
+## Getting started
 
 ```bash
 bun install
+{%- if has_wasm %}
+bun run build:wasm
+{%- endif %}
 bun run dev
 ```
-{%- if has_wasm %}
+{%- if has_docker %}
 
-Build the Rust WASM crate:
+### Start the development stack
 
 ```bash
-bun run build:wasm
+docker compose up -d
 ```
+
+This provisions **Grafana** (with the plugin pre-loaded), **Prometheus**, **Tempo**, and **Loki** — datasources are auto-configured.
+{%- if has_mock %}
+The **otel-mock** service generates correlated traces, logs, and metrics automatically.
 {%- endif %}
+
+Open Grafana at `http://localhost:3000`.
+{%- endif %}
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `bun run dev` | Rspack watch mode |
+| `bun run build` | Production build{% if has_wasm %} (TypeScript + WASM){% endif %} |
+| `bun run test` | Run tests with Bun |
+| `bun run lint` | Check code with Biome |
+| `bun run lint:fix` | Auto-fix with Biome |
+| `bun run format` | Format with Biome |
+| `bun run verify` | Lint + test + build |
+{%- if has_wasm %}
+| `bun run build:wasm` | Build Rust → WASM via wasm-pack |
+| `bun run setup` | Install deps + build WASM |
+{%- endif %}
+| `bun run bump:patch` | Bump patch version |
 
 ## Build
 
@@ -25,25 +54,93 @@ bun run build:wasm
 bun run build
 ```
 
-The packaged plugin is emitted under `dist/{{ plugin_id }}/`.
+The packaged plugin is emitted to `dist/{{ plugin_id }}/`.
+{%- if has_wasm %}
 
-## Verify
+### WASM
+
+The Rust crate compiles to WASM via wasm-pack. The TypeScript bridge at `src/services/wasm-bridge.ts` loads the module synchronously.
 
 ```bash
-bun run verify
+bun run build:wasm
 ```
+{%- endif %}
 {%- if has_docker %}
 
-## Docker
+## Docker environment
 
-When Docker support is enabled, use the generated compose file for local Grafana development.
+| Service | Description | Port |
+| --- | --- | --- |
+| Grafana | Dashboard & plugin host | 3000 |
+| Prometheus | Metrics store | 9090 |
+| Tempo | Distributed tracing backend | 3200, 4317 |
+| Loki | Log aggregation | 3100 |
+{%- if has_mock %}
+| otel-mock | Mock telemetry generator | 9464 |
+{%- endif %}
+
+```bash
+docker compose up -d   # start all services
+docker compose down    # stop and remove
+docker compose logs -f # follow logs
+```
 {%- endif %}
 {%- if has_mock %}
 
 ## Mock data
 
-When mock data generation is enabled, refer to the generated mock tooling in this repository.
+The `otel-mock/` directory contains a Rust-based telemetry generator that produces:
+
+- **Distributed traces** — multi-service call chains (3–7 hops) sent via OTLP to Tempo
+- **Correlated logs** — JSON log lines pushed to Loki with matching `trace_id`
+- **Prometheus metrics** — scraped by Prometheus from the built-in exporter
+
+Configuration via environment variables in `docker-compose.yml`:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://tempo:4317` | Tempo OTLP gRPC endpoint |
+| `LOKI_URL` | `http://loki:3100` | Loki push API base URL |
+| `OTEL_MOCK_PROM_ADDR` | `0.0.0.0:9464` | Prometheus metrics listen address |
+| `OTEL_MOCK_TICK_MS` | `5000` | Interval between generated traces (ms) |
 {%- endif %}
+
+## Project structure
+
+```text
+{{ plugin_name }}/
+├── src/
+│   ├── components/         # plugin UI components
+│   ├── module.ts           # Grafana entry point
+│   └── types/              # shared TypeScript types
+{%- if has_wasm %}
+├── {{ crate_name }}/       # Rust WASM crate
+├── Cargo.toml              # Rust workspace
+{%- endif %}
+{%- if has_docker %}
+├── docker-compose.yml      # development stack
+├── provisioning/           # auto-provisioned datasources
+{%- endif %}
+{%- if has_mock %}
+├── otel-mock/              # mock telemetry generator
+{%- endif %}
+├── plugin.json             # Grafana plugin manifest
+├── package.json            # Bun scripts & dependencies
+├── rspack.config.js        # Rspack bundler config
+├── biome.json              # Biome formatter & linter
+└── tsconfig.json
+```
+
+## Updating
+
+When a new version of `create-grafana-plugin` is available:
+
+```bash
+npx create-grafana-plugin update            # apply updates
+npx create-grafana-plugin update --dry-run  # preview changes first
+```
+
+Only files marked `@managed` are updated; your custom code remains untouched.
 
 ## License
 
