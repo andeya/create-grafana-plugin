@@ -19,7 +19,6 @@ yarn.lock
 *.sublime-workspace
 
 coverage/
-.eslintcache
 .env
 .env.*
 .DS_Store
