@@ -56,23 +56,7 @@ pub fn generate(config: &ProjectConfig) -> Result<PathBuf> {
     std::fs::write(&version_marker, env!("CARGO_PKG_VERSION"))
         .context("Failed to write version marker")?;
 
-    // Format generated files with Biome before git init so the initial commit is clean.
-    print!("  {} Formatting generated files...", "⟳".cyan().bold());
-    let fmt_ok = Command::new("bunx")
-        .args(["@biomejs/biome", "format", "--write", "."])
-        .current_dir(&output_dir)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .is_ok_and(|s| s.success());
-    if fmt_ok {
-        println!("\r  {} Formatted generated files   ", "✓".green().bold());
-    } else {
-        println!(
-            "\r  {} Formatting skipped (install bun to enable)",
-            "⚠".yellow().bold()
-        );
-    }
+    format_generated_files(&output_dir, config.has_wasm);
 
     if let Ok(output) = Command::new("git")
         .arg("init")
@@ -115,4 +99,43 @@ pub fn generate(config: &ProjectConfig) -> Result<PathBuf> {
     println!();
 
     Ok(output_dir)
+}
+
+/// Format generated project files so the initial commit is clean.
+///
+/// Runs Biome for TS/JS/JSON and `cargo fmt` for Rust (when WASM is enabled).
+/// Both steps degrade gracefully when the required toolchain is absent.
+fn format_generated_files(output_dir: &std::path::Path, has_wasm: bool) {
+    let null = || std::process::Stdio::null();
+    let run = |cmd: &str, args: &[&str]| -> bool {
+        Command::new(cmd)
+            .args(args)
+            .current_dir(output_dir)
+            .stdout(null())
+            .stderr(null())
+            .status()
+            .is_ok_and(|s| s.success())
+    };
+
+    print!("  {} Formatting TS/JS/JSON...", "⟳".cyan().bold());
+    if run("bunx", &["@biomejs/biome", "format", "--write", "."]) {
+        println!("\r  {} Formatted TS/JS/JSON       ", "✓".green().bold());
+    } else {
+        println!(
+            "\r  {} TS/JS/JSON formatting skipped (bun not found)",
+            "⚠".yellow().bold()
+        );
+    }
+
+    if has_wasm {
+        print!("  {} Formatting Rust code...", "⟳".cyan().bold());
+        if run("cargo", &["fmt", "--all"]) {
+            println!("\r  {} Formatted Rust code       ", "✓".green().bold());
+        } else {
+            println!(
+                "\r  {} Rust formatting skipped (cargo not found)",
+                "⚠".yellow().bold()
+            );
+        }
+    }
 }
