@@ -170,7 +170,7 @@ my-plugin/
 ├── package.json
 ├── tsconfig.json
 ├── tsconfig.test.json
-├── rspack.config.js
+├── rspack.config.ts
 ├── bunfig.toml
 ├── tests/
 ├── README.md
