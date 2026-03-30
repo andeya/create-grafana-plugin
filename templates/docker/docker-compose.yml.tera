@@ -17,8 +17,9 @@ services:
       - prometheus
       - tempo
       - loki
+{%- if has_mock %}
 
-{% if has_mock %}  otel-mock:
+  otel-mock:
     build:
       context: .
       dockerfile: otel-mock/Dockerfile
@@ -33,7 +34,8 @@ services:
     depends_on:
       - tempo
       - loki
-{% endif %}
+{%- endif %}
+
   prometheus:
     image: prom/prometheus:latest
     user: "nobody"
