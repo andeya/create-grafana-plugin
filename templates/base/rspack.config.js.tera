@@ -1,13 +1,13 @@
 // @managed by create-grafana-plugin — do not edit
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import rspack from '@rspack/core';
-import type { Configuration } from '@rspack/core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PLUGIN_ID = '{{ plugin_id }}';
 
+/** @type {import('@rspack/core').Configuration} */
 export default {
   mode: 'production',
   entry: {
@@ -17,7 +17,6 @@ export default {
     filename: 'module.js',
     path: path.resolve(__dirname, `dist/${PLUGIN_ID}`),
     library: {
-      // Anonymous AMD — Grafana loads plugins via its own AMD loader
       type: 'amd',
     },
     clean: true,
@@ -53,17 +52,14 @@ export default {
           },
         ],
       },
-{% if has_wasm %}
+{%- if has_wasm %}
       {
-        // Inline .wasm as base64 data URL — avoids a separate network request
-        // and works around Grafana's static server blocking .wasm MIME types.
         test: /\.wasm$/,
         type: 'asset/inline',
       },
-{% endif %}
+{%- endif %}
     ],
   },
-  // Output is always AMD for Grafana's plugin loader — only the `amd` key matters.
   externals: {
     react: { amd: 'react' },
     'react-dom': { amd: 'react-dom' },
@@ -87,4 +83,4 @@ export default {
     minimize: true,
   },
   stats: 'errors-warnings',
-} satisfies Configuration;
+};
