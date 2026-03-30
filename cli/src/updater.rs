@@ -298,6 +298,7 @@ fn discover_project_config(project_dir: &Path) -> Result<ProjectConfig> {
         has_wasm,
         has_docker,
         has_mock,
+        port_offset: 0,
     })
 }
 

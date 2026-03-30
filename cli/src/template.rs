@@ -48,6 +48,7 @@ pub struct TemplateContext {
     pub has_wasm: bool,
     pub has_docker: bool,
     pub has_mock: bool,
+    pub port_offset: u16,
 
     // Computed fields
     pub plugin_id: String,
@@ -86,6 +87,7 @@ impl TemplateContext {
             has_wasm: config.has_wasm,
             has_docker: config.has_docker,
             has_mock: config.has_mock,
+            port_offset: config.port_offset,
             plugin_id,
             crate_name,
             current_year: year,

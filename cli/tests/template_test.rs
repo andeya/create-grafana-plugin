@@ -13,6 +13,7 @@ fn sample_config() -> ProjectConfig {
         has_wasm: true,
         has_docker: false,
         has_mock: false,
+        port_offset: 0,
     }
 }
 
@@ -56,6 +57,7 @@ fn template_context_derived_fields() {
         has_wasm: true,
         has_docker: true,
         has_mock: true,
+        port_offset: 0,
     };
     let ctx = TemplateContext::from_config(&cfg);
     assert_eq!(ctx.plugin_id, "orgx-foo-bar-baz");

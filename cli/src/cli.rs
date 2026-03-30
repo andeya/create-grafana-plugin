@@ -36,6 +36,10 @@ pub struct Args {
     #[arg(long)]
     pub mock: bool,
 
+    /// Port offset for Docker services (e.g. 100 → Grafana on 3100)
+    #[arg(long, default_value = "0")]
+    pub port_offset: u16,
+
     /// Read config from file
     #[arg(long, value_name = "FILE")]
     pub config: Option<String>,

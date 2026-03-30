@@ -6,7 +6,7 @@ services:
     container_name: {{ plugin_name }}-grafana
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "{{ 3000 + port_offset }}:3000"
     environment:
       - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS={{ plugin_id }}
       - GF_AUTH_ANONYMOUS_ENABLED=true
@@ -36,7 +36,7 @@ services:
       OTEL_MOCK_TICK_MS: "5000"
       RUST_LOG: info
     ports:
-      - "9464:9464"
+      - "{{ 9464 + port_offset }}:9464"
     networks:
       - {{ plugin_name }}-net
     depends_on:
@@ -49,7 +49,7 @@ services:
     image: prom/prometheus:latest
     user: "nobody"
     ports:
-      - "9090:9090"
+      - "{{ 9090 + port_offset }}:9090"
     volumes:
       - ./provisioning/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
@@ -65,8 +65,8 @@ services:
     image: grafana/tempo:2.6.1
     user: root
     ports:
-      - "3200:3200"
-      - "4317:4317"
+      - "{{ 3200 + port_offset }}:3200"
+      - "{{ 4317 + port_offset }}:4317"
     volumes:
       - ./provisioning/tempo/tempo.yml:/etc/tempo/tempo.yml
       - tempo-data:/var/lib/tempo
@@ -80,7 +80,7 @@ services:
     image: grafana/loki:latest
     user: root
     ports:
-      - "3100:3100"
+      - "{{ 3100 + port_offset }}:3100"
     volumes:
       - ./provisioning/loki/config.yml:/etc/loki/local-config.yaml
       - loki-data:/loki

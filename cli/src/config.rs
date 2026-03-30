@@ -32,6 +32,7 @@ pub struct ProjectConfig {
     pub has_wasm: bool,
     pub has_docker: bool,
     pub has_mock: bool,
+    pub port_offset: u16,
 }
 
 /// Template layer directories in merge order — single source of truth for scaffold and [`crate::updater::update`].
@@ -82,6 +83,7 @@ struct TomlConfig {
     wasm: Option<bool>,
     docker: Option<bool>,
     mock: Option<bool>,
+    port_offset: Option<u16>,
 }
 
 /// Convert plugin name to valid kebab-case
@@ -170,6 +172,11 @@ pub fn resolve_config(args: &crate::cli::Args) -> Result<ProjectConfig> {
     } else {
         toml_cfg.as_ref().and_then(|c| c.mock)
     };
+    let port_offset = if args.port_offset > 0 {
+        Some(args.port_offset)
+    } else {
+        toml_cfg.as_ref().and_then(|c| c.port_offset)
+    };
     if let (Some(name_val), Some(ptype_val), Some(author_val), Some(org_val)) = (
         name.as_deref(),
         plugin_type_str.as_deref(),
@@ -185,6 +192,7 @@ pub fn resolve_config(args: &crate::cli::Args) -> Result<ProjectConfig> {
             has_wasm: has_wasm.unwrap_or(false),
             has_docker: has_docker.unwrap_or(false),
             has_mock: has_mock.unwrap_or(false),
+            port_offset: port_offset.unwrap_or(0),
         };
         validate_project_config(&cfg)?;
         return Ok(cfg);
@@ -290,6 +298,7 @@ pub fn resolve_config(args: &crate::cli::Args) -> Result<ProjectConfig> {
         has_wasm,
         has_docker,
         has_mock,
+        port_offset: port_offset.unwrap_or(0),
     };
     validate_project_config(&cfg)?;
     Ok(cfg)
@@ -309,6 +318,7 @@ mod tests {
             has_wasm: false,
             has_docker,
             has_mock,
+            port_offset: 0,
         }
     }
 
