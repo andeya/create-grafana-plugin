@@ -67,6 +67,7 @@ bun run setup        # install deps + build WASM (if enabled)
 docker compose up -d # start Grafana + backends (if --docker)
 bun run dev          # Rspack watch mode
 bun run package      # build + create dist .tar.gz archive
+bun run dev:reload   # build + force-recreate Grafana container
 ```
 
 Open Grafana at `http://localhost:3000` — datasources, plugins, and mock data are pre-configured.

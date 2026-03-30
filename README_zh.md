@@ -67,6 +67,7 @@ bun run setup        # 安装依赖 + 构建 WASM（如启用）
 docker compose up -d # 启动 Grafana + 后端（如 --docker）
 bun run dev          # Rspack watch 模式
 bun run package      # 构建 + 生成 dist .tar.gz 归档
+bun run dev:reload   # 构建 + 强制重建 Grafana 容器
 ```
 
 打开 `http://localhost:3000` —— 数据源、插件、Mock 数据均已预配置就绪。
