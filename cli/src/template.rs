@@ -11,7 +11,7 @@ use tera::Tera;
 use crate::config::ProjectConfig;
 
 /// All template files under `templates/`, baked into the binary at compile time.
-static TEMPLATES: Dir = include_dir!("$CARGO_MANIFEST_DIR/../templates");
+static TEMPLATES: Dir = include_dir!("$CARGO_MANIFEST_DIR/templates");
 
 /// Render embedded template content to bytes.
 ///
