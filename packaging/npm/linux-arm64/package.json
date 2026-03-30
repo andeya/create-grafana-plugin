@@ -1,6 +1,6 @@
 {
   "name": "@andeya/create-grafana-plugin-linux-arm64",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Prebuilt create-grafana-plugin binary for Linux (arm64)",
   "license": "MIT",
   "repository": {
@@ -19,6 +19,9 @@
   "cpu": [
     "arm64"
   ],
+  "bin": {
+    "create-grafana-plugin": "bin/create-grafana-plugin"
+  },
   "files": [
     "bin",
     "README.md"
