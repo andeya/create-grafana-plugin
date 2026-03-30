@@ -1,5 +1,5 @@
 // @managed by create-grafana-plugin — do not edit
-{% if plugin_type == "datasource" %}
+{%- if plugin_type == "datasource" %}
 import type { DataQuery, DataSourceJsonData } from '@grafana/data';
 
 /** Query model for {{ plugin_id }} — extend with fields your data source needs. */
@@ -11,7 +11,7 @@ export interface {{ pascal_case_name }}Query extends DataQuery {
 export interface {{ pascal_case_name }}JsonData extends DataSourceJsonData {
   readonly exampleField?: string;
 }
-{% else %}
+{%- else %}
 /**
  * Shared types for {{ plugin_id }}.
  * Add interfaces and type aliases here as the plugin grows.
@@ -20,4 +20,4 @@ export interface {{ pascal_case_name }}PluginMeta {
   readonly pluginId: '{{ plugin_id }}';
   readonly pluginType: '{{ plugin_type }}';
 }
-{% endif %}
+{%- endif %}

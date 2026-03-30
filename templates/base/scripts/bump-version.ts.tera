@@ -84,17 +84,19 @@ updateJson(path.join(root, 'plugin.json'), (plugin) => {
   info['updated'] = today;
 });
 
-{% if has_wasm %}
+{%- if has_wasm %}
+
 const wasmCargo = path.join(root, '{{ crate_name }}', 'Cargo.toml');
 if (existsSync(wasmCargo)) {
   updateToml(wasmCargo, version);
 }
-{% endif %}
-{% if has_mock %}
+{%- endif %}
+{%- if has_mock %}
+
 const otelCargo = path.join(root, 'otel-mock', 'Cargo.toml');
 if (existsSync(otelCargo)) {
   updateToml(otelCargo, version);
 }
-{% endif %}
+{%- endif %}
 
 console.log(`\nDone. Run 'bun run build' to include the new version in dist.`);

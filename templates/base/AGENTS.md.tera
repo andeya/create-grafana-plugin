@@ -47,7 +47,8 @@ If any check fails, fix the issue before committing. Never skip verification.
 - Prefer named exports over default exports
 - Consistent naming: `camelCase` for variables/functions, `PascalCase` for types/components
 
-{% if has_wasm %}
+{%- if has_wasm %}
+
 ## Rust Rules
 
 - **Never** use `.unwrap()` in library code — use `Result` and `?` operator
@@ -55,8 +56,8 @@ If any check fails, fix the issue before committing. Never skip verification.
 - Run `cargo clippy --workspace -- -D warnings` — zero warnings tolerance
 - Run `cargo fmt` before commit — formatting is non-negotiable
 - All public items **must** have `///` doc comments
+{%- endif %}
 
-{% endif %}
 ## Version bumps
 
 Run `bun run bump patch|minor|major` or `bun run bump x.y.z`. This updates `package.json`, `plugin.json`{% if has_wasm %}, `{{ crate_name }}/Cargo.toml` `version`{% endif %}{% if has_mock %}`, and `otel-mock/Cargo.toml` `version`{% endif %}.
@@ -69,6 +70,6 @@ Run `bun run bump patch|minor|major` or `bun run bump x.y.z`. This updates `pack
 ## Error Handling
 
 TypeScript: use try/catch with typed error responses, never swallow errors.
-{% if has_wasm %}
+{%- if has_wasm %}
 Rust: propagate with `Result` and `?`, add context with `.map_err()`.
-{% endif %}
+{%- endif %}

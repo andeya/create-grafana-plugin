@@ -10,15 +10,15 @@
 bun install
 bun run dev
 ```
+{%- if has_wasm %}
 
-{% if has_wasm %}
 Build the Rust WASM crate:
 
 ```bash
 bun run build:wasm
 ```
+{%- endif %}
 
-{% endif %}
 ## Build
 
 ```bash
@@ -32,19 +32,19 @@ The packaged plugin is emitted under `dist/{{ plugin_id }}/`.
 ```bash
 bun run verify
 ```
+{%- if has_docker %}
 
-{% if has_docker %}
 ## Docker
 
 When Docker support is enabled, use the generated compose file for local Grafana development.
+{%- endif %}
+{%- if has_mock %}
 
-{% endif %}
-{% if has_mock %}
 ## Mock data
 
 When mock data generation is enabled, refer to the generated mock tooling in this repository.
+{%- endif %}
 
-{% endif %}
 ## License
 
 Copyright © {{ current_year }} {{ author }}. All rights reserved.
