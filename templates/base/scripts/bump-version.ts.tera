@@ -8,7 +8,11 @@
  *   bun run bump patch|minor|major
  */
 
+{%- if has_wasm or has_mock %}
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+{%- else %}
+import { readFileSync, writeFileSync } from 'node:fs';
+{%- endif %}
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -65,12 +69,14 @@ function updateJson(filePath: string, updater: (obj: Record<string, unknown>) =>
   console.log(`  ✓ ${filePath}`);
 }
 
+{%- if has_wasm or has_mock %}
 function updateToml(filePath: string, ver: string): void {
   let raw = readFileSync(filePath, 'utf8');
   raw = raw.replace(/^version\s*=\s*"[^"]*"/m, `version = "${ver}"`);
   writeFileSync(filePath, raw, 'utf8');
   console.log(`  ✓ ${filePath}`);
 }
+{%- endif %}
 
 console.log(`Bumping to ${version} (${today})\n`);
 

@@ -1,7 +1,7 @@
 # @managed by create-grafana-plugin — do not edit
 FROM rust:1.83-bookworm AS builder
 WORKDIR /app
-COPY otel-mock/Cargo.toml otel-mock/Cargo.lock* ./
+COPY otel-mock/Cargo.toml ./
 COPY otel-mock/src ./src
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \

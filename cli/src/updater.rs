@@ -323,7 +323,13 @@ fn infer_port_offset(project_dir: &Path) -> u16 {
             in_grafana = true;
             continue;
         }
-        if in_grafana && !trimmed.is_empty() && !trimmed.starts_with('-') && !trimmed.starts_with('#') && !line.starts_with(' ') && !line.starts_with('\t') {
+        if in_grafana
+            && !trimmed.is_empty()
+            && !trimmed.starts_with('-')
+            && !trimmed.starts_with('#')
+            && !line.starts_with(' ')
+            && !line.starts_with('\t')
+        {
             break;
         }
         if in_grafana {

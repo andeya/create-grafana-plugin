@@ -68,4 +68,4 @@ jobs:
         run: bun install
 
       - name: Lint TS/JS (Biome)
-        run: bun run lint
+        run: bun run lint:ts

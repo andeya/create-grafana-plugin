@@ -85,10 +85,7 @@ pub fn generate(config: &ProjectConfig) -> Result<PathBuf> {
     if git_ok {
         println!("  {} Initialized git repository", "✓".green().bold());
     } else {
-        println!(
-            "  {} Git init skipped (git not found)",
-            "⚠".yellow().bold()
-        );
+        println!("  {} Git init skipped (git not found)", "⚠".yellow().bold());
     }
 
     println!("\n  {}\n", "Next steps:".bold());
@@ -128,8 +125,10 @@ fn format_generated_files(output_dir: &std::path::Path, has_wasm: bool) {
     };
 
     print!("  {} Formatting & fixing TS/JS/JSON...", "⟳".cyan().bold());
-    let biome_ok =
-        run("bunx", &["@biomejs/biome", "check", "--write", "--unsafe", "."]);
+    let biome_ok = run(
+        "bunx",
+        &["@biomejs/biome", "check", "--write", "--unsafe", "."],
+    );
     if biome_ok {
         println!(
             "\r  {} Formatted & fixed TS/JS/JSON       ",
