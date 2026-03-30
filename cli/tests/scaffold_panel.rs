@@ -35,7 +35,7 @@ fn panel_plugin_has_expected_files_and_metadata() {
         "package.json",
         "plugin.json",
         "tsconfig.json",
-        "rspack.config.js",
+        "rspack.config.ts",
         "tsconfig.test.json",
         "bunfig.toml",
         "tests/unit/smoke.test.ts",

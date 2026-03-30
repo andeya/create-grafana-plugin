@@ -51,7 +51,7 @@ fn panel_wasm_includes_workspace_and_crate() {
         "wasm bridge should use initSync + inlined wasm import"
     );
 
-    let rspack = fs::read_to_string(root.join("rspack.config.js")).expect("rspack");
+    let rspack = fs::read_to_string(root.join("rspack.config.ts")).expect("rspack");
     assert!(
         rspack.contains("asset/inline") && rspack.contains(".wasm"),
         "rspack should inline .wasm"
