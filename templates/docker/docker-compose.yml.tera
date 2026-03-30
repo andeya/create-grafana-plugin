@@ -1,6 +1,9 @@
 # @managed by create-grafana-plugin — do not edit
+name: {{ plugin_name }}
+
 services:
   grafana:
+    container_name: {{ plugin_name }}-grafana
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
@@ -20,6 +23,7 @@ services:
 {%- if has_mock %}
 
   otel-mock:
+    container_name: {{ plugin_name }}-otel-mock
     build:
       context: .
       dockerfile: otel-mock/Dockerfile
@@ -37,6 +41,7 @@ services:
 {%- endif %}
 
   prometheus:
+    container_name: {{ plugin_name }}-prometheus
     image: prom/prometheus:latest
     user: "nobody"
     ports:
@@ -50,6 +55,7 @@ services:
       - --storage.tsdb.path=/prometheus
 
   tempo:
+    container_name: {{ plugin_name }}-tempo
     image: grafana/tempo:2.6.1
     user: root
     ports:
@@ -62,6 +68,7 @@ services:
       - -config.file=/etc/tempo/tempo.yml
 
   loki:
+    container_name: {{ plugin_name }}-loki
     image: grafana/loki:latest
     user: root
     ports:
