@@ -1,0 +1,132 @@
+// @managed by create-grafana-plugin — do not edit
+//! Synthetic multi-service call graph for generating realistic distributed traces.
+
+use std::ops::Range;
+
+use rand::seq::SliceRandom;
+use rand::Rng;
+
+const HOP_SLEEP_CAP_MS: u64 = 2500;
+
+/// A single hop in a distributed trace.
+#[derive(Debug, Clone)]
+pub struct Hop {
+    pub service: &'static str,
+    pub operation: String,
+    pub duration_ms_range: Range<u64>,
+}
+
+/// A complete trace plan with a chain of hops and pre-sampled sleep durations.
+#[derive(Debug, Clone)]
+pub struct TracePlan {
+    pub chain: Vec<Hop>,
+    pub hop_sleep_ms: Vec<u64>,
+    pub total_duration_ms: u64,
+}
+
+/// Defines the set of synthetic services and how to build random call chains.
+pub struct ServiceCallGraph {
+    services: &'static [&'static str],
+}
+
+impl Default for ServiceCallGraph {
+    fn default() -> Self {
+        Self {
+            services: &[
+                "api-gateway",
+                "auth-service",
+                "user-service",
+                "order-service",
+                "payment-service",
+                "notification-service",
+                "postgres-db",
+                "redis-cache",
+            ],
+        }
+    }
+}
+
+impl ServiceCallGraph {
+    /// Builds a random depth 3..7 chain with realistic service operations.
+    pub fn sample_trace(&self, rng: &mut impl Rng) -> TracePlan {
+        let depth: usize = rng.gen_range(3..=7);
+        let mut chain: Vec<Hop> = Vec::with_capacity(depth);
+        let mut services: Vec<&'static str> = self.services.to_vec();
+        services.shuffle(rng);
+
+        for i in 0..depth {
+            let svc = services[i % services.len()];
+            let op = match svc {
+                "api-gateway" => format!(
+                    "HTTP {}",
+                    ["GET /api/v1/data", "POST /api/v1/action", "GET /api/v1/status"]
+                        .choose(rng)
+                        .unwrap_or(&"GET /api/v1/data")
+                ),
+                "postgres-db" => ["SELECT users", "INSERT events", "UPDATE orders"]
+                    .choose(rng)
+                    .unwrap_or(&"SELECT users")
+                    .to_string(),
+                "redis-cache" => ["GET session", "SET cache", "DEL expired"]
+                    .choose(rng)
+                    .unwrap_or(&"GET session")
+                    .to_string(),
+                "notification-service" => ["SendEmail", "SendPush", "SendSMS"]
+                    .choose(rng)
+                    .unwrap_or(&"SendEmail")
+                    .to_string(),
+                _ => format!(
+                    "rpc.{}",
+                    ["Process", "Validate", "Execute", "Fetch"]
+                        .choose(rng)
+                        .unwrap_or(&"Call")
+                ),
+            };
+
+            let duration_ms_range = if svc.contains("postgres") {
+                8..180
+            } else if svc.contains("redis") {
+                1..25
+            } else {
+                5..120
+            };
+
+            chain.push(Hop {
+                service: svc,
+                operation: op,
+                duration_ms_range,
+            });
+        }
+
+        let hop_sleep_ms: Vec<u64> = chain
+            .iter()
+            .map(|h| {
+                rng.gen_range(h.duration_ms_range.clone())
+                    .min(HOP_SLEEP_CAP_MS)
+            })
+            .collect();
+        let total_duration_ms: u64 = hop_sleep_ms.iter().sum();
+
+        TracePlan {
+            chain,
+            hop_sleep_ms,
+            total_duration_ms,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sample_trace_has_multi_hop_chain() {
+        let g = ServiceCallGraph::default();
+        let mut rng = rand::thread_rng();
+        let p = g.sample_trace(&mut rng);
+        assert!(p.chain.len() >= 3);
+        assert!(p.total_duration_ms > 0);
+        assert_eq!(p.hop_sleep_ms.len(), p.chain.len());
+        assert_eq!(p.total_duration_ms, p.hop_sleep_ms.iter().sum::<u64>());
+    }
+}

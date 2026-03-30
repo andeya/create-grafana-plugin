@@ -1,0 +1,61 @@
+// @managed by create-grafana-plugin — do not edit
+//! Push JSON logs to Loki with trace correlation labels.
+
+use reqwest::Url;
+
+use crate::graph::TracePlan;
+
+/// Pushes one log line per hop to Loki's push API.
+///
+/// `otel_trace_id` must match the OTLP trace id sent to Tempo so Grafana can
+/// correlate logs with traces.
+pub async fn push_loki_streams(
+    loki_base: &str,
+    plan: &TracePlan,
+    otel_trace_id: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let base = loki_base.trim_end_matches('/');
+    let url = Url::parse(&format!("{base}/loki/api/v1/push"))?;
+
+    let base_ns = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0i128, |d| i128::try_from(d.as_nanos()).unwrap_or(0));
+
+    let mut streams = Vec::new();
+    for (i, hop) in plan.chain.iter().enumerate() {
+        let ts_ns = (base_ns + i as i128).to_string();
+        let hop_ms = plan.hop_sleep_ms.get(i).copied().unwrap_or(0);
+
+        let line = serde_json::json!({
+            "trace_id": otel_trace_id,
+            "service": hop.service,
+            "operation": hop.operation,
+            "duration_ms": hop_ms,
+            "total_duration_ms": plan.total_duration_ms,
+        })
+        .to_string();
+
+        streams.push(serde_json::json!({
+            "stream": {
+                "service_name": hop.service,
+                "trace_id": otel_trace_id,
+                "level": "info",
+            },
+            "values": [[ts_ns, line]],
+        }));
+    }
+
+    let body = serde_json::json!({ "streams": streams });
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()?;
+
+    let res = client.post(url).json(&body).send().await?;
+    let status = res.status();
+    if !status.is_success() {
+        let txt = res.text().await.unwrap_or_default();
+        return Err(format!("loki push {status}: {txt}").into());
+    }
+
+    Ok(())
+}

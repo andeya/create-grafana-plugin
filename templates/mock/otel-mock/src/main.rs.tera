@@ -1,16 +1,180 @@
 // @managed by create-grafana-plugin — do not edit
 //! Mock telemetry data generator for {{ plugin_name }}.
-//! Generates synthetic metrics, traces, and logs for local development.
+//!
+//! Generates synthetic multi-service distributed traces (OTLP → Tempo),
+//! correlated logs (HTTP push → Loki), and Prometheus-scrapable metrics
+//! on a configurable tick interval.
 
+mod graph;
+mod loki_push;
+
+use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::Duration;
 
+use async_recursion::async_recursion;
+use graph::{ServiceCallGraph, TracePlan};
+use loki_push::push_loki_streams;
+use metrics::{counter, gauge};
+use metrics_exporter_prometheus::PrometheusBuilder;
+use opentelemetry::global;
+use opentelemetry::trace::TraceContextExt;
+use opentelemetry::KeyValue;
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::trace::{RandomIdGenerator, TracerProvider};
+use opentelemetry_sdk::Resource;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
+use tokio::time::interval;
+use tracing::{info, warn};
+use tracing_opentelemetry::OpenTelemetrySpanExt;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
+
+#[derive(Debug)]
+struct Config {
+    otlp_endpoint: String,
+    loki_url: String,
+    prom_addr: SocketAddr,
+    tick_ms: u64,
+}
+
+impl Config {
+    fn from_env() -> Self {
+        Self {
+            otlp_endpoint: std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+                .unwrap_or_else(|_| "http://tempo:4317".into()),
+            loki_url: std::env::var("LOKI_URL")
+                .unwrap_or_else(|_| "http://loki:3100".into()),
+            prom_addr: std::env::var("OTEL_MOCK_PROM_ADDR")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or_else(|| SocketAddr::from(([0, 0, 0, 0], 9464))),
+            tick_ms: std::env::var("OTEL_MOCK_TICK_MS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(4000),
+        }
+    }
+}
+
+fn init_tracer(
+    otlp_endpoint: &str,
+) -> Result<TracerProvider, opentelemetry::trace::TraceError> {
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(otlp_endpoint.to_string())
+        .build()?;
+
+    let resource = Resource::new(vec![
+        KeyValue::new("service.name", "otel-mock"),
+        KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
+    ]);
+
+    Ok(TracerProvider::builder()
+        .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
+        .with_resource(resource)
+        .with_id_generator(RandomIdGenerator::default())
+        .build())
+}
+
+fn install_prometheus(addr: SocketAddr) -> Result<(), metrics_exporter_prometheus::BuildError> {
+    PrometheusBuilder::new().with_http_listener(addr).install()
+}
+
+fn record_graph_metrics(plan: &TracePlan) {
+    gauge!("otel_mock_active_services").set(plan.chain.len() as f64);
+    counter!("otel_mock_traces_generated_total").increment(1);
+}
+
+/// Emits a chain of nested child spans, each hop parenting the next.
+#[async_recursion]
+async fn emit_hops(
+    chain: &[graph::Hop],
+    sleep_ms: &[u64],
+    idx: usize,
+    parent: tracing::Span,
+) {
+    if idx >= chain.len() {
+        return;
+    }
+    let hop = &chain[idx];
+    let hop_ms = sleep_ms.get(idx).copied().unwrap_or(0);
+
+    let span = tracing::info_span!(
+        parent: parent,
+        "service_hop",
+        "service.name" = hop.service,
+        "otel.name" = hop.operation.as_str(),
+        "peer.service" = hop.service,
+        "rpc.system" = "grpc",
+    );
+    let child = span.clone();
+    let _e = span.enter();
+    tokio::time::sleep(Duration::from_millis(hop_ms)).await;
+    emit_hops(chain, sleep_ms, idx + 1, child).await;
+}
+
+async fn emit_trace(
+    plan: &TracePlan,
+    config: &Config,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let root = tracing::info_span!("synthetic_trace", "otel.name" = "synthetic_trace");
+
+    let otel_trace_id = async {
+        let _root_guard = root.enter();
+        let tid = root.context().span().span_context().trace_id().to_string();
+        emit_hops(&plan.chain, &plan.hop_sleep_ms, 0, root.clone()).await;
+        tid
+    }
+    .await;
+
+    push_loki_streams(&config.loki_url, plan, &otel_trace_id).await?;
+    Ok(())
+}
+
 #[tokio::main]
-async fn main() {
-    tracing_subscriber::fmt::init();
-    tracing::info!("otel-mock started for {{ plugin_name }}");
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let config = Config::from_env();
+    let provider = init_tracer(&config.otlp_endpoint)?;
+    global::set_tracer_provider(provider.clone());
+
+    tracing_subscriber::registry()
+        .with(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,tokio=warn")),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_opentelemetry::layer())
+        .init();
+
+    install_prometheus(config.prom_addr)?;
+    info!(addr = %config.prom_addr, "Prometheus metrics endpoint listening");
+    info!(tick_ms = config.tick_ms, "Starting mock data generation loop");
+
+    let graph = Arc::new(ServiceCallGraph::default());
+    let mut rng = StdRng::from_entropy();
+    let mut tick = interval(Duration::from_millis(config.tick_ms));
 
     loop {
-        tracing::info!("Generating mock data tick");
-        tokio::time::sleep(Duration::from_secs(5)).await;
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {
+                info!("shutting down");
+                if let Err(e) = provider.shutdown() {
+                    warn!(error = %e, "tracer provider shutdown");
+                }
+                break;
+            }
+            _ = tick.tick() => {
+                let plan = graph.sample_trace(&mut rng);
+                record_graph_metrics(&plan);
+                if let Err(e) = emit_trace(&plan, &config).await {
+                    warn!(error = %e, "emit tick failed");
+                }
+            }
+        }
     }
+
+    Ok(())
 }
