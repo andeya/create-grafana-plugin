@@ -8,6 +8,12 @@
 
 ---
 
+## Dashboard 预览
+
+![OTel Mock Dashboard](docs/ScreenShot_dashboard.png)
+
+> 预配置的 Grafana Dashboard，包含请求速率、延迟分位数、错误分类、系统资源仪表盘和 Loki 日志面板 —— 使用 `--mock` 时自动配置。
+
 ## 为什么选择 create-grafana-plugin？
 
 | 痛点 | 解决方式 |
@@ -27,7 +33,7 @@
 - **三种插件类型** —— Panel、Data Source、App，各自携带专属组件、类型定义与入口。
 - **可选 Rust → WASM** —— wasm-pack crate、TypeScript 桥接（`wasm-bridge.ts`）、Cargo 工作区，适合浏览器端计算密集型逻辑。
 - **完整可观测开发栈** —— Docker Compose 编排 Grafana、Prometheus、Tempo、Loki，数据源自动配置，项目级网络隔离。
-- **生产级 Mock 数据** —— `otel-mock` 生成逼真的多服务分布式链路（OTLP → Tempo）、关联 JSON 日志（→ Loki）、可被 Prometheus 抓取的指标，支持配置心跳间隔。
+- **生产级 Mock 数据** —— `otel-mock` 模拟 10 个微服务及固定的真实调用链，生成分布式链路（OTLP → Tempo）、关联 JSON 日志（→ Loki）、可被 Prometheus 抓取的全类型指标（Counter、Gauge、Histogram），错误率在 10–90% 间随机。自动配置 Grafana Dashboard，包含请求速率、延迟分位数、错误分类、系统资源仪表盘和 Loki 日志面板。
 - **端口隔离** —— `--port-offset N` 将所有宿主端口偏移 N（如 `--port-offset 100` → Grafana 3100、Prometheus 9190）。
 - **配置驱动** —— 交互提示、CLI 参数或 `.grafana-plugin.toml` 文件，对 CI 友好。
 - **智能更新** —— `create-grafana-plugin update` 将受管理文件与最新模板 diff；`--dry-run` 预览变更。
@@ -173,12 +179,13 @@ my-plugin/
 ├── bunfig.toml                     # Bun 配置
 ├── Cargo.toml                      # Rust 工作区（--wasm 时）
 ├── docker-compose.yml              # Grafana + Prometheus + Tempo + Loki
-├── provisioning/                   # 自动配置的数据源与服务
+├── provisioning/                   # 自动配置的数据源、Dashboard 与服务
 ├── otel-mock/                      # Rust Mock 遥测数据生成器
 │   └── src/
 │       ├── main.rs                 # OTLP traces + Loki logs + Prometheus metrics
-│       ├── graph.rs                # 合成多服务调用图
-│       └── loki_push.rs            # Loki push API 客户端
+│       ├── graph.rs                # 合成多服务调用图（10 个服务）
+│       ├── loki_push.rs            # Loki push API 客户端
+│       └── openmetrics_exemplars.rs # 含 trace_id exemplar 的直方图
 ├── src/
 │   ├── components/MainPanel.tsx    # 插件 UI
 │   ├── module.ts                   # Grafana 入口

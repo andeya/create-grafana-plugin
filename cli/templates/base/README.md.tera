@@ -97,12 +97,15 @@ docker compose logs -f # follow logs
 
 ## Mock data
 
-The `otel-mock/` directory contains a Rust-based telemetry generator that produces:
+The `otel-mock/` directory contains a Rust-based telemetry generator that simulates 10 microservices (`api-gateway`, `auth-service`, `user-service`, `order-service`, `payment-service`, `notification-service`, `inventory-service`, `recommendation-service`, `postgres-db`, `redis-cache`) with 10 fixed realistic call chain templates. Error rate is randomly chosen between 10–90% at startup.
 
-- **Distributed traces** — multi-service call chains (4–8 hops) sent via OTLP to Tempo
+It produces:
+
+- **Distributed traces** — multi-service call chains (3–4 hops) sent via OTLP to Tempo with rich OTel semantic attributes (HTTP, DB, RPC)
 - **Correlated logs** — JSON log lines pushed to Loki with matching `trace_id`
-- **Prometheus metrics** — counters and gauges scraped from the built-in exporter
+- **Prometheus metrics** — all meter types: counters (`otel_mock_http_requests_total`, `otel_mock_service_errors_total`), gauges (`otel_mock_service_cpu_usage_percent`, `otel_mock_service_memory_usage_bytes`, `otel_mock_service_inflight_requests`), and histograms (`otel_mock_http_request_duration_seconds`)
 - **OpenMetrics histogram with exemplars** — `otel_mock_trace_duration_seconds` carries `trace_id` exemplars, enabling metric → trace correlation in Grafana
+- **Pre-configured Grafana dashboard** — auto-provisioned dashboard with panels for request rates, latency percentiles, error breakdown, system resource gauges, and Loki logs
 
 Configuration via environment variables in `docker-compose.yml`:
 

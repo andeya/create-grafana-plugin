@@ -107,17 +107,17 @@ fn record_trace_metrics(plan: &TracePlan) {
         let duration_s = plan.hop_sleep_ms[i] as f64 / 1000.0;
         let status = if hop.severity == Severity::Error { "error" } else { "ok" };
 
-        counter!("http_requests_total", "service" => svc, "status" => status).increment(1);
-        histogram!("http_request_duration_seconds", "service" => svc).record(duration_s);
+        counter!("otel_mock_http_requests_total", "service" => svc, "status" => status).increment(1);
+        histogram!("otel_mock_http_request_duration_seconds", "service" => svc).record(duration_s);
 
         if let Some(ref msg) = hop.attrs.error_message {
-            counter!("service_errors_total", "service" => svc, "error_type" => classify_error(msg))
+            counter!("otel_mock_service_errors_total", "service" => svc, "error_type" => classify_error(msg))
                 .increment(1);
         }
 
         if let Some(method) = hop.attrs.http_method {
             let code = hop.attrs.http_status_code.unwrap_or(200).to_string();
-            counter!("http_requests_by_method_total", "service" => svc, "method" => method, "status_code" => code.clone())
+            counter!("otel_mock_http_requests_by_method_total", "service" => svc, "method" => method, "status_code" => code.clone())
                 .increment(1);
         }
     }
@@ -125,11 +125,11 @@ fn record_trace_metrics(plan: &TracePlan) {
 
 fn record_system_gauges(rng: &mut impl Rng) {
     for &svc in ALL_SERVICES {
-        gauge!("service_inflight_requests", "service" => svc)
+        gauge!("otel_mock_service_inflight_requests", "service" => svc)
             .set(rng.gen_range(0.0..50.0));
-        gauge!("service_cpu_usage_percent", "service" => svc)
+        gauge!("otel_mock_service_cpu_usage_percent", "service" => svc)
             .set(rng.gen_range(5.0..85.0));
-        gauge!("service_memory_usage_bytes", "service" => svc)
+        gauge!("otel_mock_service_memory_usage_bytes", "service" => svc)
             .set(rng.gen_range(100_000_000.0..2_000_000_000.0));
     }
     gauge!("otel_mock_queue_depth").set(rng.gen_range(0.0..100.0));

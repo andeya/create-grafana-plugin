@@ -8,6 +8,12 @@ Scaffold panel, data source, or app plugins with the fastest modern frontend too
 
 ---
 
+## Dashboard Preview
+
+![OTel Mock Dashboard](docs/ScreenShot_dashboard.png)
+
+> Pre-configured Grafana dashboard with request rates, latency percentiles, error breakdown, system resource gauges, and Loki logs — auto-provisioned when you use `--mock`.
+
 ## Why create-grafana-plugin?
 
 | Pain point | How this tool solves it |
@@ -27,7 +33,7 @@ Scaffold panel, data source, or app plugins with the fastest modern frontend too
 - **Three plugin types** — Panel, Data Source, App. Each gets type-specific components, types, and module entry points.
 - **Optional Rust → WASM** — wasm-pack crate, TypeScript bridge (`wasm-bridge.ts`), Cargo workspace — ready for compute-heavy logic in the browser.
 - **Full observability dev stack** — Docker Compose with Grafana, Prometheus, Tempo, Loki, auto-provisioned datasources, and network isolation per project.
-- **Production-grade mock data** — `otel-mock` generates realistic distributed traces (OTLP → Tempo), correlated JSON logs (→ Loki), and Prometheus-scrapable metrics on a configurable tick interval.
+- **Production-grade mock data** — `otel-mock` simulates 10 microservices with fixed realistic call chains, generating distributed traces (OTLP → Tempo), correlated JSON logs (→ Loki), and Prometheus-scrapable metrics (counters, gauges, histograms) with a random error rate (10–90%). A pre-configured Grafana dashboard is auto-provisioned with panels for request rates, latency percentiles, error breakdown, system resource gauges, and Loki logs.
 - **Port isolation** — `--port-offset N` shifts every Docker host port by N (e.g., `--port-offset 100` → Grafana on 3100, Prometheus on 9190).
 - **Config-driven** — Interactive prompts, CLI flags, or a `.grafana-plugin.toml` file. CI-friendly.
 - **Smart updates** — `create-grafana-plugin update` diffs managed files against the latest template; `--dry-run` previews changes.
@@ -173,12 +179,13 @@ my-plugin/
 ├── bunfig.toml                     # Bun config
 ├── Cargo.toml                      # Rust workspace (when --wasm)
 ├── docker-compose.yml              # Grafana + Prometheus + Tempo + Loki
-├── provisioning/                   # auto-provisioned datasources & config
+├── provisioning/                   # auto-provisioned datasources, dashboards & config
 ├── otel-mock/                      # Rust mock telemetry generator
 │   └── src/
 │       ├── main.rs                 # OTLP traces + Loki logs + Prometheus metrics
-│       ├── graph.rs                # synthetic multi-service call graph
-│       └── loki_push.rs            # Loki push API client
+│       ├── graph.rs                # synthetic multi-service call graph (10 services)
+│       ├── loki_push.rs            # Loki push API client
+│       └── openmetrics_exemplars.rs # histogram with trace_id exemplars
 ├── src/
 │   ├── components/MainPanel.tsx    # plugin UI
 │   ├── module.ts                   # Grafana entry point
