@@ -2,7 +2,6 @@
 /**
  * Resolves the platform-specific optional dependency and runs the native binary.
  */
-'use strict';
 
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');

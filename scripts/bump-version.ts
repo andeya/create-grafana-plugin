@@ -12,7 +12,7 @@
  *   bun scripts/bump-version.ts 1.2.3        — set explicit version everywhere
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -86,7 +86,7 @@ function updatePackageJson(dir: string, version: string): void {
     }
   }
 
-  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+  writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
   console.log(`  ✓ ${dir}/package.json → ${version}`);
 }
 
@@ -94,7 +94,7 @@ function updateRootPackageJson(version: string): void {
   const pkgPath = path.join(ROOT, 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { version: string };
   pkg.version = version;
-  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+  writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
   console.log(`  ✓ package.json (root) → ${version}`);
 }
 

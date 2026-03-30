@@ -25,10 +25,10 @@
   "scripts": {
     "fmt": "bun run fmt:rust && bun run fmt:ts",
     "fmt:rust": "cargo fmt --all",
-    "fmt:ts": "prettier --write \"scripts/**/*.{ts,js}\" \"packaging/**/*.js\"",
+    "fmt:ts": "biome format --write scripts/ packaging/",
     "lint": "bun run lint:rust && bun run lint:ts",
     "lint:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
-    "lint:ts": "prettier --check \"scripts/**/*.{ts,js}\" \"packaging/**/*.js\"",
+    "lint:ts": "biome check scripts/ packaging/",
     "test": "cargo test --workspace",
     "verify": "bun run lint && bun run test",
     "bump": "bun scripts/bump-version.ts",
@@ -37,7 +37,7 @@
     "bump:major": "bun scripts/bump-version.ts major"
   },
   "devDependencies": {
-    "bun-types": "^1.3.11",
-    "prettier": "^3.8.1"
+    "@biomejs/biome": "^2.4.9",
+    "bun-types": "^1.3.11"
   }
 }
