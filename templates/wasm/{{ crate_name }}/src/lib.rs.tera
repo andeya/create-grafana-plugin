@@ -1,5 +1,5 @@
 // @managed by create-grafana-plugin — do not edit
-//! {{ pascal_case_name }} WASM analysis engine.
+//! `{{ pascal_case_name }}` WASM analysis engine.
 
 use wasm_bindgen::prelude::*;
 
