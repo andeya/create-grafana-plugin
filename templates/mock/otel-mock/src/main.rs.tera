@@ -6,7 +6,7 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
     tracing::info!("otel-mock started for {{ plugin_name }}");
 
     loop {
