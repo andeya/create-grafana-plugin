@@ -59,6 +59,7 @@ Open Grafana at `http://localhost:{{ 3000 + port_offset }}` (port offset: {{ por
 | `bun run lint:fix` | Auto-fix with Biome |
 | `bun run format` | Format with Biome |
 {%- endif %}
+| `bun run package` | Build + create dist `.tar.gz` archive |
 | `bun run verify` | Lint + test + build |
 | `bun run bump:patch` | Bump patch version |
 
