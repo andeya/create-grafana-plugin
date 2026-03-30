@@ -73,14 +73,14 @@ bun run build:wasm
 
 ## Docker environment
 
-| Service | Description | Host port |
+| Service | Description | URL |
 | --- | --- | --- |
-| Grafana | Dashboard & plugin host | {{ 3000 + port_offset }} |
-| Prometheus | Metrics store | {{ 9090 + port_offset }} |
-| Tempo | Distributed tracing backend | {{ 3200 + port_offset }}, {{ 4317 + port_offset }} |
-| Loki | Log aggregation | {{ 3100 + port_offset }} |
+| Grafana | Dashboard & plugin host | [http://localhost:{{ 3000 + port_offset }}](http://localhost:{{ 3000 + port_offset }}) |
+| Prometheus | Metrics store & query | [http://localhost:{{ 9090 + port_offset }}](http://localhost:{{ 9090 + port_offset }}) |
+| Tempo | Distributed tracing backend | [http://localhost:{{ 3200 + port_offset }}](http://localhost:{{ 3200 + port_offset }}) (HTTP) / `localhost:{{ 4317 + port_offset }}` (OTLP gRPC) |
+| Loki | Log aggregation | [http://localhost:{{ 3100 + port_offset }}](http://localhost:{{ 3100 + port_offset }}) |
 {%- if has_mock %}
-| otel-mock | Mock telemetry generator | {{ 9464 + port_offset }}, {{ 9465 + port_offset }} |
+| otel-mock | Mock telemetry generator | [http://localhost:{{ 9464 + port_offset }}/metrics](http://localhost:{{ 9464 + port_offset }}/metrics) (Prometheus) / [http://localhost:{{ 9465 + port_offset }}/metrics](http://localhost:{{ 9465 + port_offset }}/metrics) (OpenMetrics) |
 {%- endif %}
 
 ```bash
