@@ -39,7 +39,6 @@ pub fn update(dry_run: bool) -> Result<()> {
     let project_dir = std::env::current_dir().context("Failed to get current directory")?;
     let stored_version = read_version_marker(&project_dir);
     let cfg = discover_project_config(&project_dir)?;
-    let tpl_root = template::templates_root()?;
     let mut context = TemplateContext::from_config(&cfg);
     context.apply_dates_from_existing_plugin_json(&project_dir);
 
@@ -53,13 +52,13 @@ pub fn update(dry_run: bool) -> Result<()> {
     println!("  Templates: {}", dirs.join(" + "));
     println!("  Tool version: {}", env!("CARGO_PKG_VERSION"));
 
-    let files = template::collect_template_dirs(&tpl_root, &dirs);
+    let files = template::collect_template_files(&dirs);
     if files.is_empty() {
-        anyhow::bail!("No template files found in: {}", tpl_root.display());
+        anyhow::bail!("No embedded template files found for: {}", dirs.join(", "));
     }
 
-    let mut by_output: HashMap<PathBuf, (PathBuf, PathBuf)> = HashMap::new();
-    for (src, rel) in files {
+    let mut by_output: HashMap<PathBuf, (&[u8], PathBuf)> = HashMap::new();
+    for (contents, rel) in files {
         let rel_str = rel
             .to_string_lossy()
             .replace("{{ crate_name }}", &context.crate_name);
@@ -69,7 +68,7 @@ pub fn update(dry_run: bool) -> Result<()> {
         } else {
             adjusted_rel
         };
-        by_output.insert(out_rel, (src, rel));
+        by_output.insert(out_rel, (contents, rel));
     }
 
     let mut sorted: Vec<_> = by_output.into_iter().collect();
@@ -79,8 +78,8 @@ pub fn update(dry_run: bool) -> Result<()> {
     let mut created = 0usize;
     let mut skipped = 0usize;
 
-    for (out_rel, (src, template_rel)) in sorted {
-        let new_bytes = template::render_template_to_bytes(&src, &template_rel, &context)?;
+    for (out_rel, (contents, template_rel)) in sorted {
+        let new_bytes = template::render_to_bytes(contents, &template_rel, &context)?;
         let dest = project_dir.join(&out_rel);
 
         if dest.exists() {
