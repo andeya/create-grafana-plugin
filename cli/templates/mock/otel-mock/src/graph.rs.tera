@@ -8,10 +8,36 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 
 const HOP_SLEEP_CAP_MS: u64 = 2500;
-/// ~8% of traces will contain at least one errored hop.
-const ERROR_PROBABILITY: f64 = 0.08;
 /// ~5% of hops produce a latency outlier (3–10x normal range).
 const LATENCY_OUTLIER_PROBABILITY: f64 = 0.05;
+
+/// All synthetic microservices in the topology.
+pub const ALL_SERVICES: &[&str] = &[
+    "api-gateway",
+    "auth-service",
+    "user-service",
+    "order-service",
+    "payment-service",
+    "notification-service",
+    "inventory-service",
+    "recommendation-service",
+    "postgres-db",
+    "redis-cache",
+];
+
+/// Fixed realistic call chain templates representing common request flows.
+const CALL_CHAINS: &[&[&str]] = &[
+    &["api-gateway", "auth-service", "redis-cache"],
+    &["api-gateway", "user-service", "postgres-db"],
+    &["api-gateway", "user-service", "auth-service", "redis-cache"],
+    &["api-gateway", "order-service", "payment-service", "notification-service"],
+    &["api-gateway", "order-service", "inventory-service", "postgres-db"],
+    &["api-gateway", "recommendation-service", "redis-cache", "postgres-db"],
+    &["api-gateway", "order-service", "user-service", "postgres-db"],
+    &["api-gateway", "auth-service", "user-service", "notification-service"],
+    &["api-gateway", "order-service", "payment-service", "postgres-db"],
+    &["api-gateway", "inventory-service", "recommendation-service", "redis-cache"],
+];
 
 /// Log severity for a hop — drives both span status and Loki log level.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,6 +54,25 @@ impl Severity {
             Self::Warn => "warn",
             Self::Error => "error",
         }
+    }
+}
+
+/// Classified error type for low-cardinality metric labels.
+pub fn classify_error(msg: &str) -> &'static str {
+    if msg.contains("timeout") || msg.contains("deadline") {
+        "timeout"
+    } else if msg.contains("connection") {
+        "connection_error"
+    } else if msg.contains("circuit breaker") {
+        "circuit_breaker"
+    } else if msg.contains("too many") || msg.contains("exhausted") {
+        "rate_limited"
+    } else if msg.contains("deadlock") {
+        "deadlock"
+    } else if msg.contains("OOM") {
+        "out_of_memory"
+    } else {
+        "internal_error"
     }
 }
 
@@ -63,48 +108,44 @@ pub struct TracePlan {
     pub has_error: bool,
 }
 
-/// Defines the set of synthetic services and how to build random call chains.
+/// Defines the set of synthetic services and fixed call chains.
 pub struct ServiceCallGraph {
-    services: &'static [&'static str],
+    error_rate: f64,
 }
 
 impl Default for ServiceCallGraph {
     fn default() -> Self {
-        Self {
-            services: &[
-                "api-gateway",
-                "auth-service",
-                "user-service",
-                "order-service",
-                "payment-service",
-                "notification-service",
-                "inventory-service",
-                "recommendation-service",
-                "postgres-db",
-                "redis-cache",
-            ],
-        }
+        Self::new(&mut rand::thread_rng())
     }
 }
 
 impl ServiceCallGraph {
-    /// Builds a random depth 4..8 chain with realistic service operations,
-    /// intermittent errors, latency outliers, and rich semantic attributes.
-    pub fn sample_trace(&self, rng: &mut impl Rng) -> TracePlan {
-        let depth: usize = rng.gen_range(4..=8);
-        let mut chain: Vec<Hop> = Vec::with_capacity(depth);
-        let mut services: Vec<&'static str> = self.services.to_vec();
-        services.shuffle(rng);
+    /// Create a new graph with a random error rate between 10–90%.
+    pub fn new(rng: &mut impl Rng) -> Self {
+        Self {
+            error_rate: rng.gen_range(0.10..=0.90),
+        }
+    }
 
-        let inject_error = rng.gen_bool(ERROR_PROBABILITY);
+    pub fn error_rate(&self) -> f64 {
+        self.error_rate
+    }
+
+    /// Picks a random fixed call chain, applies error injection at the configured
+    /// rate, and returns a fully-sampled trace plan.
+    pub fn sample_trace(&self, rng: &mut impl Rng) -> TracePlan {
+        let chain_template = CALL_CHAINS.choose(rng).expect("call chains not empty");
+        let depth = chain_template.len();
+        let mut chain: Vec<Hop> = Vec::with_capacity(depth);
+
+        let inject_error = rng.gen_bool(self.error_rate);
         let error_idx = if inject_error {
             rng.gen_range(1..depth)
         } else {
             usize::MAX
         };
 
-        for i in 0..depth {
-            let svc = services[i % services.len()];
+        for (i, &svc) in chain_template.iter().enumerate() {
             let is_errored = i == error_idx;
             let is_downstream_of_error = inject_error && i > error_idx;
 
@@ -272,22 +313,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sample_trace_has_multi_hop_chain() {
+    fn sample_trace_follows_fixed_chain() {
         let g = ServiceCallGraph::default();
         let mut rng = rand::thread_rng();
-        let p = g.sample_trace(&mut rng);
-        assert!(p.chain.len() >= 4);
-        assert!(p.total_duration_ms > 0);
-        assert_eq!(p.hop_sleep_ms.len(), p.chain.len());
-        assert_eq!(p.total_duration_ms, p.hop_sleep_ms.iter().sum::<u64>());
+        for _ in 0..50 {
+            let p = g.sample_trace(&mut rng);
+            assert!(p.chain.len() >= 3, "chain must have >= 3 hops");
+            assert_eq!(p.chain[0].service, "api-gateway", "first hop is always api-gateway");
+            assert!(p.total_duration_ms > 0);
+            assert_eq!(p.hop_sleep_ms.len(), p.chain.len());
+            assert_eq!(p.total_duration_ms, p.hop_sleep_ms.iter().sum::<u64>());
+        }
+    }
+
+    #[test]
+    fn error_rate_within_range() {
+        let mut rng = rand::thread_rng();
+        for _ in 0..20 {
+            let g = ServiceCallGraph::new(&mut rng);
+            assert!((0.10..=0.90).contains(&g.error_rate()));
+        }
     }
 
     #[test]
     fn error_traces_have_error_severity() {
-        let g = ServiceCallGraph::default();
+        let g = ServiceCallGraph { error_rate: 0.5 };
         let mut rng = rand::thread_rng();
         let mut found_error = false;
-        for _ in 0..200 {
+        for _ in 0..100 {
             let p = g.sample_trace(&mut rng);
             if p.has_error {
                 assert!(
@@ -297,6 +350,6 @@ mod tests {
                 found_error = true;
             }
         }
-        assert!(found_error, "should generate at least one error trace in 200 samples");
+        assert!(found_error, "should generate at least one error trace in 100 samples at 50% rate");
     }
 }

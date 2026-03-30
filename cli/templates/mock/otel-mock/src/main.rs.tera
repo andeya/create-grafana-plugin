@@ -16,21 +16,21 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_recursion::async_recursion;
-use graph::{Hop, ServiceCallGraph, Severity, TracePlan};
+use graph::{classify_error, Hop, ServiceCallGraph, Severity, TracePlan, ALL_SERVICES};
 use loki_push::push_loki_streams;
-use metrics::{counter, gauge};
+use metrics::{counter, gauge, histogram};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use openmetrics_exemplars::{serve_openmetrics, ExemplarRegistry};
 use opentelemetry::global;
-use opentelemetry::trace::TraceContextExt;
+use opentelemetry::trace::{SpanContext, SpanId, TraceContextExt, TraceFlags, TraceId, TraceState};
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::trace::{RandomIdGenerator, TracerProvider};
 use opentelemetry_sdk::Resource;
 use rand::rngs::StdRng;
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
 use tokio::time::interval;
-use tracing::{info, warn};
+use tracing::{info, warn, Instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -92,12 +92,44 @@ fn install_prometheus(addr: SocketAddr) -> Result<(), metrics_exporter_prometheu
     PrometheusBuilder::new().with_http_listener(addr).install()
 }
 
-fn record_graph_metrics(plan: &TracePlan) {
-    gauge!("otel_mock_active_services").set(plan.chain.len() as f64);
+fn record_trace_metrics(plan: &TracePlan) {
     counter!("otel_mock_traces_generated_total").increment(1);
+    gauge!("otel_mock_active_services").set(plan.chain.len() as f64);
     if plan.has_error {
         counter!("otel_mock_error_traces_total").increment(1);
     }
+
+    for (i, hop) in plan.chain.iter().enumerate() {
+        let svc = hop.service;
+        let duration_s = plan.hop_sleep_ms[i] as f64 / 1000.0;
+        let status = if hop.severity == Severity::Error { "error" } else { "ok" };
+
+        counter!("http_requests_total", "service" => svc, "status" => status).increment(1);
+        histogram!("http_request_duration_seconds", "service" => svc).record(duration_s);
+
+        if let Some(ref msg) = hop.attrs.error_message {
+            counter!("service_errors_total", "service" => svc, "error_type" => classify_error(msg))
+                .increment(1);
+        }
+
+        if let Some(method) = hop.attrs.http_method {
+            let code = hop.attrs.http_status_code.unwrap_or(200).to_string();
+            counter!("http_requests_by_method_total", "service" => svc, "method" => method, "status_code" => code.clone())
+                .increment(1);
+        }
+    }
+}
+
+fn record_system_gauges(rng: &mut impl Rng) {
+    for &svc in ALL_SERVICES {
+        gauge!("service_inflight_requests", "service" => svc)
+            .set(rng.gen_range(0.0..50.0));
+        gauge!("service_cpu_usage_percent", "service" => svc)
+            .set(rng.gen_range(5.0..85.0));
+        gauge!("service_memory_usage_bytes", "service" => svc)
+            .set(rng.gen_range(100_000_000.0..2_000_000_000.0));
+    }
+    gauge!("otel_mock_queue_depth").set(rng.gen_range(0.0..100.0));
 }
 
 /// Emits a chain of nested child spans with rich OTel semantic attributes.
@@ -171,14 +203,20 @@ async fn emit_trace(
     config: &Config,
     exemplars: &ExemplarRegistry,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let root = tracing::info_span!("synthetic_trace", "otel.name" = "synthetic_trace");
+    let trace_id = TraceId::from_bytes(rand::thread_rng().gen());
+    let span_id = SpanId::from_bytes(rand::thread_rng().gen());
+    let parent_cx = opentelemetry::Context::default().with_remote_span_context(
+        SpanContext::new(trace_id, span_id, TraceFlags::SAMPLED, true, TraceState::default()),
+    );
 
-    let otel_trace_id = async {
-        let _root_guard = root.enter();
-        let tid = root.context().span().span_context().trace_id().to_string();
-        emit_hops(&plan.chain, &plan.hop_sleep_ms, 0, root.clone()).await;
-        tid
+    let root = tracing::info_span!("synthetic_trace", "otel.name" = "synthetic_trace");
+    root.set_parent(parent_cx);
+    let otel_trace_id = trace_id.to_string();
+
+    async {
+        emit_hops(&plan.chain, &plan.hop_sleep_ms, 0, tracing::Span::current()).await;
     }
+    .instrument(root)
     .await;
 
     exemplars.record_trace_duration_seconds(
@@ -216,10 +254,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     });
     info!(addr = %config.openmetrics_addr, "OpenMetrics histogram with trace_id exemplars");
 
-    info!(tick_ms = config.tick_ms, "Starting mock data generation loop");
-
-    let graph = Arc::new(ServiceCallGraph::default());
     let mut rng = StdRng::from_entropy();
+    let graph = Arc::new(ServiceCallGraph::new(&mut rng));
+    info!(
+        error_rate = format!("{:.0}%", graph.error_rate() * 100.0),
+        tick_ms = config.tick_ms,
+        "Starting mock data generation loop"
+    );
+
     let mut tick = interval(Duration::from_millis(config.tick_ms));
 
     loop {
@@ -233,7 +275,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
             _ = tick.tick() => {
                 let plan = graph.sample_trace(&mut rng);
-                record_graph_metrics(&plan);
+                record_trace_metrics(&plan);
+                record_system_gauges(&mut rng);
                 if let Err(e) = emit_trace(&plan, &config, exemplars.as_ref()).await {
                     warn!(error = %e, "emit tick failed");
                 }
