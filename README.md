@@ -10,7 +10,7 @@ Scaffold panel, data source, or app plugins with the fastest modern frontend too
 
 ## Dashboard Preview
 
-![OTel Mock Dashboard](docs/ScreenShot_dashboard.png)
+![OTel Mock Dashboard](https://raw.githubusercontent.com/andeya/create-grafana-plugin/main/docs/ScreenShot_dashboard.png)
 
 > Pre-configured Grafana dashboard with request rates, latency percentiles, error breakdown, system resource gauges, and Loki logs — auto-provisioned when you use `--mock`.
 

@@ -10,7 +10,7 @@
 
 ## Dashboard 预览
 
-![OTel Mock Dashboard](docs/ScreenShot_dashboard.png)
+![OTel Mock Dashboard](https://raw.githubusercontent.com/andeya/create-grafana-plugin/main/docs/ScreenShot_dashboard.png)
 
 > 预配置的 Grafana Dashboard，包含请求速率、延迟分位数、错误分类、系统资源仪表盘和 Loki 日志面板 —— 使用 `--mock` 时自动配置。
 
