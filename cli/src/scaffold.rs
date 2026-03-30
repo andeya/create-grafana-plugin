@@ -24,29 +24,31 @@ pub fn generate(config: &ProjectConfig) -> Result<PathBuf> {
         );
     }
 
-    let tpl_root = template::templates_root()?;
     let context = TemplateContext::from_config(config);
     let template_dirs = template_directory_stack(config);
 
     println!("\n  {} {}", "Creating".green().bold(), config.name.bold());
     println!("  Templates: {}", template_dirs.join(" + "));
 
-    let files = template::collect_template_dirs(&tpl_root, &template_dirs);
+    let files = template::collect_template_files(&template_dirs);
 
     if files.is_empty() {
-        anyhow::bail!("No template files found in: {}", tpl_root.display());
+        anyhow::bail!(
+            "No embedded template files found for: {}",
+            template_dirs.join(", ")
+        );
     }
 
     std::fs::create_dir_all(&output_dir)
         .with_context(|| format!("Failed to create: {}", output_dir.display()))?;
 
     let mut count = 0;
-    for (src, rel) in &files {
+    for (contents, rel) in &files {
         let rel_str = rel
             .to_string_lossy()
             .replace("{{ crate_name }}", &context.crate_name);
         let adjusted_rel = PathBuf::from(rel_str);
-        template::render_file(src, &output_dir, &adjusted_rel, &context)?;
+        template::write_rendered(contents, &adjusted_rel, &output_dir, &context)?;
         count += 1;
     }
 
