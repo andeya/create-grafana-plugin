@@ -26,3 +26,7 @@ tracing-opentelemetry = "0.28"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 metrics = "0.23"
 metrics-exporter-prometheus = "0.15"
+prometheus-client = "0.22"
+hyper = { version = "1", features = ["http1", "server"] }
+http-body-util = "0.1"
+hyper-util = { version = "0.1", features = ["tokio"] }

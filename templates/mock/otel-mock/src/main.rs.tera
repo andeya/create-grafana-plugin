@@ -2,11 +2,13 @@
 //! Mock telemetry data generator for {{ plugin_name }}.
 //!
 //! Generates synthetic multi-service distributed traces (OTLP → Tempo),
-//! correlated logs (HTTP push → Loki), and Prometheus-scrapable metrics
-//! on a configurable tick interval.
+//! correlated logs (HTTP push → Loki), Prometheus-scrapable metrics,
+//! and an OpenMetrics histogram with trace_id exemplars for metric → trace
+//! correlation in Grafana.
 
 mod graph;
 mod loki_push;
+mod openmetrics_exemplars;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -17,6 +19,7 @@ use graph::{ServiceCallGraph, TracePlan};
 use loki_push::push_loki_streams;
 use metrics::{counter, gauge};
 use metrics_exporter_prometheus::PrometheusBuilder;
+use openmetrics_exemplars::{serve_openmetrics, ExemplarRegistry};
 use opentelemetry::global;
 use opentelemetry::trace::TraceContextExt;
 use opentelemetry::KeyValue;
@@ -37,6 +40,7 @@ struct Config {
     otlp_endpoint: String,
     loki_url: String,
     prom_addr: SocketAddr,
+    openmetrics_addr: SocketAddr,
     tick_ms: u64,
 }
 
@@ -51,6 +55,10 @@ impl Config {
                 .ok()
                 .and_then(|s| s.parse().ok())
                 .unwrap_or_else(|| SocketAddr::from(([0, 0, 0, 0], 9464))),
+            openmetrics_addr: std::env::var("OTEL_MOCK_OPENMETRICS_ADDR")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or_else(|| SocketAddr::from(([0, 0, 0, 0], 9465))),
             tick_ms: std::env::var("OTEL_MOCK_TICK_MS")
                 .ok()
                 .and_then(|s| s.parse().ok())
@@ -119,6 +127,7 @@ async fn emit_hops(
 async fn emit_trace(
     plan: &TracePlan,
     config: &Config,
+    exemplars: &ExemplarRegistry,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let root = tracing::info_span!("synthetic_trace", "otel.name" = "synthetic_trace");
 
@@ -129,6 +138,11 @@ async fn emit_trace(
         tid
     }
     .await;
+
+    exemplars.record_trace_duration_seconds(
+        plan.total_duration_ms as f64 / 1000.0,
+        &otel_trace_id,
+    );
 
     push_loki_streams(&config.loki_url, plan, &otel_trace_id).await?;
     Ok(())
@@ -150,7 +164,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .init();
 
     install_prometheus(config.prom_addr)?;
-    info!(addr = %config.prom_addr, "Prometheus metrics endpoint listening");
+    info!(addr = %config.prom_addr, "Prometheus metrics endpoint listening (metrics crate)");
+
+    let exemplars = Arc::new(ExemplarRegistry::new());
+    let om_reg = exemplars.registry();
+    let om_addr = config.openmetrics_addr;
+    tokio::spawn(async move {
+        serve_openmetrics(om_addr, om_reg).await;
+    });
+    info!(addr = %config.openmetrics_addr, "OpenMetrics histogram with trace_id exemplars");
+
     info!(tick_ms = config.tick_ms, "Starting mock data generation loop");
 
     let graph = Arc::new(ServiceCallGraph::default());
@@ -169,7 +192,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             _ = tick.tick() => {
                 let plan = graph.sample_trace(&mut rng);
                 record_graph_metrics(&plan);
-                if let Err(e) = emit_trace(&plan, &config).await {
+                if let Err(e) = emit_trace(&plan, &config, exemplars.as_ref()).await {
                     warn!(error = %e, "emit tick failed");
                 }
             }

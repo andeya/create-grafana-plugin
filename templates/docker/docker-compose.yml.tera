@@ -33,10 +33,12 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
       LOKI_URL: http://loki:3100
       OTEL_MOCK_PROM_ADDR: 0.0.0.0:9464
+      OTEL_MOCK_OPENMETRICS_ADDR: 0.0.0.0:9465
       OTEL_MOCK_TICK_MS: "5000"
       RUST_LOG: info
     ports:
       - "{{ 9464 + port_offset }}:9464"
+      - "{{ 9465 + port_offset }}:9465"
     networks:
       - {{ plugin_name }}-net
     depends_on:

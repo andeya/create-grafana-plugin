@@ -80,7 +80,7 @@ bun run build:wasm
 | Tempo | Distributed tracing backend | {{ 3200 + port_offset }}, {{ 4317 + port_offset }} |
 | Loki | Log aggregation | {{ 3100 + port_offset }} |
 {%- if has_mock %}
-| otel-mock | Mock telemetry generator | {{ 9464 + port_offset }} |
+| otel-mock | Mock telemetry generator | {{ 9464 + port_offset }}, {{ 9465 + port_offset }} |
 {%- endif %}
 
 ```bash
@@ -95,9 +95,10 @@ docker compose logs -f # follow logs
 
 The `otel-mock/` directory contains a Rust-based telemetry generator that produces:
 
-- **Distributed traces** — multi-service call chains (3–7 hops) sent via OTLP to Tempo
+- **Distributed traces** — multi-service call chains (4–8 hops) sent via OTLP to Tempo
 - **Correlated logs** — JSON log lines pushed to Loki with matching `trace_id`
-- **Prometheus metrics** — scraped by Prometheus from the built-in exporter
+- **Prometheus metrics** — counters and gauges scraped from the built-in exporter
+- **OpenMetrics histogram with exemplars** — `otel_mock_trace_duration_seconds` carries `trace_id` exemplars, enabling metric → trace correlation in Grafana
 
 Configuration via environment variables in `docker-compose.yml`:
 
@@ -106,6 +107,7 @@ Configuration via environment variables in `docker-compose.yml`:
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://tempo:4317` | Tempo OTLP gRPC endpoint |
 | `LOKI_URL` | `http://loki:3100` | Loki push API base URL |
 | `OTEL_MOCK_PROM_ADDR` | `0.0.0.0:9464` | Prometheus metrics listen address |
+| `OTEL_MOCK_OPENMETRICS_ADDR` | `0.0.0.0:9465` | OpenMetrics histogram+exemplars listen address |
 | `OTEL_MOCK_TICK_MS` | `5000` | Interval between generated traces (ms) |
 {%- endif %}
 

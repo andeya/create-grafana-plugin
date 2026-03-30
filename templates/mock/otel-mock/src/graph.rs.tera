@@ -39,6 +39,8 @@ impl Default for ServiceCallGraph {
                 "order-service",
                 "payment-service",
                 "notification-service",
+                "inventory-service",
+                "recommendation-service",
                 "postgres-db",
                 "redis-cache",
             ],
@@ -47,9 +49,9 @@ impl Default for ServiceCallGraph {
 }
 
 impl ServiceCallGraph {
-    /// Builds a random depth 3..7 chain with realistic service operations.
+    /// Builds a random depth 4..8 chain with realistic service operations.
     pub fn sample_trace(&self, rng: &mut impl Rng) -> TracePlan {
-        let depth: usize = rng.gen_range(3..=7);
+        let depth: usize = rng.gen_range(4..=8);
         let mut chain: Vec<Hop> = Vec::with_capacity(depth);
         let mut services: Vec<&'static str> = self.services.to_vec();
         services.shuffle(rng);
@@ -75,9 +77,10 @@ impl ServiceCallGraph {
                     .choose(rng)
                     .unwrap_or(&"SendEmail")
                     .to_string(),
+                "recommendation-service" => "RankCandidates".to_string(),
                 _ => format!(
                     "rpc.{}",
-                    ["Process", "Validate", "Execute", "Fetch"]
+                    ["Checkout", "Authorize", "FetchProfile", "Reserve"]
                         .choose(rng)
                         .unwrap_or(&"Call")
                 ),
@@ -124,7 +127,7 @@ mod tests {
         let g = ServiceCallGraph::default();
         let mut rng = rand::thread_rng();
         let p = g.sample_trace(&mut rng);
-        assert!(p.chain.len() >= 3);
+        assert!(p.chain.len() >= 4);
         assert!(p.total_duration_ms > 0);
         assert_eq!(p.hop_sleep_ms.len(), p.chain.len());
         assert_eq!(p.total_duration_ms, p.hop_sleep_ms.iter().sum::<u64>());

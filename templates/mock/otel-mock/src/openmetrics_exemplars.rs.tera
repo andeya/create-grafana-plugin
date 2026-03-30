@@ -1,0 +1,105 @@
+// @managed by create-grafana-plugin — do not edit
+//! OpenMetrics histogram with exemplars (`trace_id`) for correlation with traces in Grafana.
+
+use std::net::SocketAddr;
+use std::sync::Arc;
+
+use http_body_util::Full;
+use hyper::body::Bytes;
+use hyper::server::conn::http1;
+use hyper::service::service_fn;
+use hyper::{Request, Response, StatusCode};
+use hyper_util::rt::TokioIo;
+use prometheus_client::encoding::text::encode;
+use prometheus_client::encoding::EncodeLabelSet;
+use prometheus_client::metrics::exemplar::HistogramWithExemplars;
+use prometheus_client::metrics::histogram::exponential_buckets;
+use prometheus_client::registry::Registry;
+use tokio::net::TcpListener;
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
+struct TraceExemplarLabel {
+    trace_id: String,
+}
+
+pub struct ExemplarRegistry {
+    hist: Arc<HistogramWithExemplars<TraceExemplarLabel>>,
+    registry: Arc<Registry>,
+}
+
+impl ExemplarRegistry {
+    pub fn new() -> Self {
+        let hist = Arc::new(HistogramWithExemplars::new(exponential_buckets(
+            0.001, 2.0, 18,
+        )));
+        let mut registry = Registry::default();
+        registry.register(
+            "otel_mock_trace_duration_seconds",
+            "Synthetic trace duration in seconds; exemplars carry trace_id",
+            (*hist).clone(),
+        );
+        Self {
+            hist,
+            registry: Arc::new(registry),
+        }
+    }
+
+    pub fn record_trace_duration_seconds(&self, seconds: f64, trace_id: &str) {
+        self.hist.observe(
+            seconds,
+            Some(TraceExemplarLabel {
+                trace_id: trace_id.to_string(),
+            }),
+        );
+    }
+
+    pub fn registry(&self) -> Arc<Registry> {
+        self.registry.clone()
+    }
+}
+
+pub async fn serve_openmetrics(addr: SocketAddr, registry: Arc<Registry>) {
+    let listener = match TcpListener::bind(addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            tracing::warn!(error = %e, "openmetrics bind failed");
+            return;
+        }
+    };
+    loop {
+        let stream = match listener.accept().await {
+            Ok((s, _)) => s,
+            Err(e) => {
+                tracing::warn!(error = %e, "openmetrics accept");
+                continue;
+            }
+        };
+        let reg = registry.clone();
+        tokio::task::spawn(async move {
+            let io = TokioIo::new(stream);
+            let svc = service_fn(move |_req: Request<hyper::body::Incoming>| {
+                let reg = reg.clone();
+                async move {
+                    let mut buf = String::new();
+                    if encode(&mut buf, &reg).is_err() {
+                        let resp = Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(Full::new(Bytes::from("encode error")))
+                            .unwrap_or_else(|_| Response::new(Full::new(Bytes::from("error"))));
+                        return Ok::<_, std::convert::Infallible>(resp);
+                    }
+                    let resp = Response::builder()
+                        .status(StatusCode::OK)
+                        .header(
+                            "Content-Type",
+                            "application/openmetrics-text; version=1.0.0; charset=utf-8",
+                        )
+                        .body(Full::new(Bytes::from(buf)))
+                        .unwrap_or_else(|_| Response::new(Full::new(Bytes::from("fallback"))));
+                    Ok(resp)
+                }
+            });
+            let _ = http1::Builder::new().serve_connection(io, svc).await;
+        });
+    }
+}
