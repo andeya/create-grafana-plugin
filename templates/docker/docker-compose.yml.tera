@@ -9,6 +9,7 @@ services:
       - "{{ 3000 + port_offset }}:3000"
     environment:
       - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS={{ plugin_id }}
+      - GF_PLUGINS_ENABLE_ALPHA=true
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_LOG_LEVEL=debug

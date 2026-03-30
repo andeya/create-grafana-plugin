@@ -1,3 +1,10 @@
 # @managed by create-grafana-plugin — do not edit
 apiVersion: 1
-apps: []
+apps:
+{%- if plugin_type == "app" %}
+  - type: {{ plugin_id }}
+    org_id: 1
+    disabled: false
+{%- else %}
+  []
+{%- endif %}

@@ -29,6 +29,24 @@
     "version": "1.0.0",
     "updated": "{{ today }}"
   },
+{%- if plugin_type == "app" %}
+  "includes": [
+    {
+      "type": "page",
+      "name": "{% for word in plugin_name | split(pat='-') %}{{ word | capitalize }}{% if not loop.last %} {% endif %}{% endfor %}",
+      "path": "/a/{{ plugin_id }}",
+      "role": "Viewer",
+      "addToNav": true,
+      "defaultNav": true
+    },
+    {
+      "type": "page",
+      "name": "Configuration",
+      "path": "/plugins/{{ plugin_id }}",
+      "role": "Admin"
+    }
+  ],
+{%- endif %}
   "dependencies": {
     "grafanaDependency": ">=10.0.0"
   }
