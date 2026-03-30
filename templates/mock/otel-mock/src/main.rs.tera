@@ -1,10 +1,11 @@
 // @managed by create-grafana-plugin — do not edit
 //! Mock telemetry data generator for {{ plugin_name }}.
 //!
-//! Generates synthetic multi-service distributed traces (OTLP → Tempo),
-//! correlated logs (HTTP push → Loki), Prometheus-scrapable metrics,
-//! and an OpenMetrics histogram with trace_id exemplars for metric → trace
-//! correlation in Grafana.
+//! Generates high-fidelity synthetic data:
+//! - Multi-service distributed traces (OTLP → Tempo) with rich semantic attributes,
+//!   intermittent errors, and latency outliers
+//! - Correlated logs at varying severity levels (HTTP push → Loki)
+//! - Prometheus-scrapable counters/gauges + OpenMetrics histogram with trace_id exemplars
 
 mod graph;
 mod loki_push;
@@ -15,7 +16,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_recursion::async_recursion;
-use graph::{ServiceCallGraph, TracePlan};
+use graph::{Hop, ServiceCallGraph, Severity, TracePlan};
 use loki_push::push_loki_streams;
 use metrics::{counter, gauge};
 use metrics_exporter_prometheus::PrometheusBuilder;
@@ -94,12 +95,15 @@ fn install_prometheus(addr: SocketAddr) -> Result<(), metrics_exporter_prometheu
 fn record_graph_metrics(plan: &TracePlan) {
     gauge!("otel_mock_active_services").set(plan.chain.len() as f64);
     counter!("otel_mock_traces_generated_total").increment(1);
+    if plan.has_error {
+        counter!("otel_mock_error_traces_total").increment(1);
+    }
 }
 
-/// Emits a chain of nested child spans, each hop parenting the next.
+/// Emits a chain of nested child spans with rich OTel semantic attributes.
 #[async_recursion]
 async fn emit_hops(
-    chain: &[graph::Hop],
+    chain: &[Hop],
     sleep_ms: &[u64],
     idx: usize,
     parent: tracing::Span,
@@ -117,7 +121,45 @@ async fn emit_hops(
         "otel.name" = hop.operation.as_str(),
         "peer.service" = hop.service,
         "rpc.system" = "grpc",
+        "otel.status_code" = match hop.severity {
+            Severity::Error => "ERROR",
+            _ => "OK",
+        },
+        "http.method" = tracing::field::Empty,
+        "http.route" = tracing::field::Empty,
+        "http.status_code" = tracing::field::Empty,
+        "db.system" = tracing::field::Empty,
+        "db.statement" = tracing::field::Empty,
+        "rpc.service" = tracing::field::Empty,
+        "rpc.method" = tracing::field::Empty,
+        "error.message" = tracing::field::Empty,
     );
+
+    if let Some(m) = hop.attrs.http_method {
+        span.record("http.method", m);
+    }
+    if let Some(ref r) = hop.attrs.http_route {
+        span.record("http.route", r.as_str());
+    }
+    if let Some(c) = hop.attrs.http_status_code {
+        span.record("http.status_code", i64::from(c));
+    }
+    if let Some(d) = hop.attrs.db_system {
+        span.record("db.system", d);
+    }
+    if let Some(ref s) = hop.attrs.db_statement {
+        span.record("db.statement", s.as_str());
+    }
+    if let Some(ref s) = hop.attrs.rpc_service {
+        span.record("rpc.service", s.as_str());
+    }
+    if let Some(ref m) = hop.attrs.rpc_method {
+        span.record("rpc.method", m.as_str());
+    }
+    if let Some(ref e) = hop.attrs.error_message {
+        span.record("error.message", e.as_str());
+    }
+
     let child = span.clone();
     let _e = span.enter();
     tokio::time::sleep(Duration::from_millis(hop_ms)).await;
@@ -164,7 +206,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .init();
 
     install_prometheus(config.prom_addr)?;
-    info!(addr = %config.prom_addr, "Prometheus metrics endpoint listening (metrics crate)");
+    info!(addr = %config.prom_addr, "Prometheus metrics endpoint listening");
 
     let exemplars = Arc::new(ExemplarRegistry::new());
     let om_reg = exemplars.registry();

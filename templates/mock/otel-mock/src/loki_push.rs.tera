@@ -1,5 +1,5 @@
 // @managed by create-grafana-plugin — do not edit
-//! Push JSON logs to Loki with trace correlation labels.
+//! Push JSON logs to Loki with trace correlation labels and varying severity.
 
 use reqwest::Url;
 
@@ -7,8 +7,8 @@ use crate::graph::TracePlan;
 
 /// Pushes one log line per hop to Loki's push API.
 ///
-/// `otel_trace_id` must match the OTLP trace id sent to Tempo so Grafana can
-/// correlate logs with traces.
+/// Each log entry includes the `trace_id` for correlation with Tempo traces.
+/// Log severity (`level`) varies based on hop status: `info`, `warn`, or `error`.
 pub async fn push_loki_streams(
     loki_base: &str,
     plan: &TracePlan,
@@ -25,23 +25,43 @@ pub async fn push_loki_streams(
     for (i, hop) in plan.chain.iter().enumerate() {
         let ts_ns = (base_ns + i as i128).to_string();
         let hop_ms = plan.hop_sleep_ms.get(i).copied().unwrap_or(0);
+        let level = hop.severity.as_str();
 
-        let line = serde_json::json!({
+        let mut line = serde_json::json!({
             "trace_id": otel_trace_id,
             "service": hop.service,
             "operation": hop.operation,
             "duration_ms": hop_ms,
             "total_duration_ms": plan.total_duration_ms,
-        })
-        .to_string();
+            "level": level,
+        });
+
+        if let Some(ref msg) = hop.attrs.error_message {
+            line["error"] = serde_json::json!(msg);
+        }
+        if let Some(method) = hop.attrs.http_method {
+            line["http_method"] = serde_json::json!(method);
+        }
+        if let Some(ref route) = hop.attrs.http_route {
+            line["http_route"] = serde_json::json!(route);
+        }
+        if let Some(code) = hop.attrs.http_status_code {
+            line["http_status_code"] = serde_json::json!(code);
+        }
+        if let Some(db) = hop.attrs.db_system {
+            line["db_system"] = serde_json::json!(db);
+        }
+        if let Some(ref stmt) = hop.attrs.db_statement {
+            line["db_statement"] = serde_json::json!(stmt);
+        }
 
         streams.push(serde_json::json!({
             "stream": {
                 "service_name": hop.service,
                 "trace_id": otel_trace_id,
-                "level": "info",
+                "level": level,
             },
-            "values": [[ts_ns, line]],
+            "values": [[ts_ns, line.to_string()]],
         }));
     }
 
