@@ -249,7 +249,23 @@ fn write_file_atomic(path: &Path, contents: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn split_plugin_id(id: &str) -> Result<(&str, &str)> {
+/// Split plugin id into (org, name).
+///
+/// Uses the author URL from `plugin.json` (`https://github.com/{org}`) for robust
+/// extraction — handles org names that contain hyphens (e.g. `acme-corp-my-plugin`
+/// with `org = acme-corp`).  Falls back to simple `split_once('-')` when the URL
+/// is unavailable.
+fn split_plugin_id<'a>(id: &'a str, author_url: Option<&str>) -> Result<(&'a str, &'a str)> {
+    if let Some(url) = author_url {
+        let org_from_url = url.rsplit('/').next().unwrap_or("");
+        if !org_from_url.is_empty()
+            && let Some(name) = id
+                .strip_prefix(org_from_url)
+                .and_then(|s| s.strip_prefix('-'))
+        {
+            return Ok((&id[..org_from_url.len()], name));
+        }
+    }
     id.split_once('-')
         .context("plugin id must be in the form org-name")
 }
@@ -264,7 +280,12 @@ fn discover_project_config(project_dir: &Path) -> Result<ProjectConfig> {
         .get("id")
         .and_then(Value::as_str)
         .context("plugin.json: missing id")?;
-    let (org, name) = split_plugin_id(id)?;
+    let author_url = v
+        .get("info")
+        .and_then(|i| i.get("author"))
+        .and_then(|a| a.get("url"))
+        .and_then(Value::as_str);
+    let (org, name) = split_plugin_id(id, author_url)?;
     let plugin_type = config::parse_plugin_type(
         v.get("type")
             .and_then(Value::as_str)
@@ -285,7 +306,8 @@ fn discover_project_config(project_dir: &Path) -> Result<ProjectConfig> {
         .to_string();
 
     let has_wasm = project_dir.join("Cargo.toml").exists();
-    let has_docker = project_dir.join("docker-compose.yml").exists();
+    let has_docker = project_dir.join("docker-compose.yml").exists()
+        || project_dir.join("docker-compose.yaml").exists();
     let has_mock = has_docker && project_dir.join("otel-mock").is_dir();
     let port_offset = if has_docker {
         infer_port_offset(project_dir)
@@ -311,8 +333,9 @@ fn discover_project_config(project_dir: &Path) -> Result<ProjectConfig> {
 /// Looks for a host:container port pair where container port is 3000 (Grafana default),
 /// then derives offset = `host_port` - 3000.  Returns 0 on any parse failure.
 fn infer_port_offset(project_dir: &Path) -> u16 {
-    let compose_path = project_dir.join("docker-compose.yml");
-    let Ok(raw) = fs::read_to_string(&compose_path) else {
+    let raw = fs::read_to_string(project_dir.join("docker-compose.yml"))
+        .or_else(|_| fs::read_to_string(project_dir.join("docker-compose.yaml")));
+    let Ok(raw) = raw else {
         return 0;
     };
     // Simple regex-free scan: find `"<host>:3000"` pattern after `grafana:` service.
@@ -377,5 +400,27 @@ mod tests {
     fn shebang_then_marker() {
         let s = format!("#!/usr/bin/env node\n{MANAGED_MARKER_JS}\nconsole.log(1);\n");
         assert!(has_js_style_marker(&s));
+    }
+
+    #[test]
+    fn split_plugin_id_simple() {
+        let (org, name) = split_plugin_id("myorg-my-plugin", None).unwrap();
+        assert_eq!(org, "myorg");
+        assert_eq!(name, "my-plugin");
+    }
+
+    #[test]
+    fn split_plugin_id_with_hyphenated_org() {
+        let (org, name) =
+            split_plugin_id("acme-corp-my-plugin", Some("https://github.com/acme-corp")).unwrap();
+        assert_eq!(org, "acme-corp");
+        assert_eq!(name, "my-plugin");
+    }
+
+    #[test]
+    fn split_plugin_id_fallback_without_url() {
+        let (org, name) = split_plugin_id("acme-corp-my-plugin", None).unwrap();
+        assert_eq!(org, "acme");
+        assert_eq!(name, "corp-my-plugin");
     }
 }
