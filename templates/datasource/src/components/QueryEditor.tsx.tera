@@ -1,12 +1,10 @@
 // @managed by create-grafana-plugin — do not edit
+import type { QueryEditorProps } from '@grafana/data';
 import { InlineField, Input } from '@grafana/ui';
 import type React from 'react';
+import type { {{ pascal_case_name }}JsonData, {{ pascal_case_name }}Query } from '../types';
 
-interface Props {
-  query: { queryText?: string; refId: string };
-  onChange: (query: { queryText?: string; refId: string }) => void;
-  onRunQuery: () => void;
-}
+type Props = QueryEditorProps<never, {{ pascal_case_name }}Query, {{ pascal_case_name }}JsonData>;
 
 export const QueryEditor: React.FC<Props> = ({ query, onChange, onRunQuery }) => {
   return (

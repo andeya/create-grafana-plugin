@@ -172,11 +172,9 @@ pub fn resolve_config(args: &crate::cli::Args) -> Result<ProjectConfig> {
     } else {
         toml_cfg.as_ref().and_then(|c| c.mock)
     };
-    let port_offset = if args.port_offset > 0 {
-        Some(args.port_offset)
-    } else {
-        toml_cfg.as_ref().and_then(|c| c.port_offset)
-    };
+    let port_offset = args
+        .port_offset
+        .or_else(|| toml_cfg.as_ref().and_then(|c| c.port_offset));
     if let (Some(name_val), Some(ptype_val), Some(author_val), Some(org_val)) = (
         name.as_deref(),
         plugin_type_str.as_deref(),

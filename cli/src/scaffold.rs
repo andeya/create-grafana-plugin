@@ -58,12 +58,15 @@ pub fn generate(config: &ProjectConfig) -> Result<PathBuf> {
 
     format_generated_files(&output_dir, config.has_wasm);
 
-    if let Ok(output) = Command::new("git")
+    let git_ok = Command::new("git")
         .arg("init")
         .current_dir(&output_dir)
-        .output()
-        && output.status.success()
-    {
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success());
+
+    if git_ok {
         let _ = Command::new("git")
             .args(["add", "."])
             .current_dir(&output_dir)
@@ -79,7 +82,14 @@ pub fn generate(config: &ProjectConfig) -> Result<PathBuf> {
     }
 
     println!("  {} Generated {} files", "✓".green().bold(), count);
-    println!("  {} Initialized git repository", "✓".green().bold());
+    if git_ok {
+        println!("  {} Initialized git repository", "✓".green().bold());
+    } else {
+        println!(
+            "  {} Git init skipped (git not found)",
+            "⚠".yellow().bold()
+        );
+    }
 
     println!("\n  {}\n", "Next steps:".bold());
     println!("    cd {}", config.name);

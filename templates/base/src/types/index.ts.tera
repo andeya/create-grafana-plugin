@@ -7,9 +7,9 @@ export interface {{ pascal_case_name }}Query extends DataQuery {
   readonly queryText?: string;
 }
 
-/** JSON data persisted with the data source instance — extend with secure fields only. */
+/** JSON data persisted with the data source instance — extend with your config fields. */
 export interface {{ pascal_case_name }}JsonData extends DataSourceJsonData {
-  readonly exampleField?: string;
+  readonly url?: string;
 }
 {%- else %}
 /**

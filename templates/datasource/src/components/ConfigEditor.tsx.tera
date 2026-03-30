@@ -2,8 +2,9 @@
 import type { DataSourcePluginOptionsEditorProps } from '@grafana/data';
 import { InlineField, Input } from '@grafana/ui';
 import type React from 'react';
+import type { {{ pascal_case_name }}JsonData } from '../types';
 
-interface Props extends DataSourcePluginOptionsEditorProps<{}> {}
+interface Props extends DataSourcePluginOptionsEditorProps<{{ pascal_case_name }}JsonData> {}
 
 export const ConfigEditor: React.FC<Props> = ({ options, onOptionsChange }) => {
   return (

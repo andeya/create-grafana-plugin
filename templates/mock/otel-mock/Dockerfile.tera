@@ -6,8 +6,8 @@ COPY otel-mock/src ./src
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target \
-    cargo build && \
-    cp target/debug/otel-mock /tmp/otel-mock
+    cargo build --release && \
+    cp target/release/otel-mock /tmp/otel-mock
 
 FROM debian:bookworm-slim
 RUN apt-get update \

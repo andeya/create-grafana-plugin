@@ -60,7 +60,7 @@ If any check fails, fix the issue before committing. Never skip verification.
 
 ## Version bumps
 
-Run `bun run bump patch|minor|major` or `bun run bump x.y.z`. This updates `package.json`, `plugin.json`{% if has_wasm %}, `{{ crate_name }}/Cargo.toml` `version`{% endif %}{% if has_mock %}`, and `otel-mock/Cargo.toml` `version`{% endif %}.
+Run `bun run bump:patch`, `bun run bump:minor`, or `bun run bump:major` (or `bun scripts/bump-version.ts x.y.z` for explicit version). This updates `package.json`, `plugin.json`{% if has_wasm %}, `{{ crate_name }}/Cargo.toml` `version`{% endif %}{% if has_mock %}`, and `otel-mock/Cargo.toml` `version`{% endif %}.
 
 ## Testing
 

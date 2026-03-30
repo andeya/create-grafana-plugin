@@ -19,10 +19,10 @@ This file defines coding standards for AI assistants working on this project.
 ## Verification
 
 ```bash
-cargo clippy --workspace -- -D warnings
-cargo fmt --all -- --check
-cargo test --workspace
+bun run verify
 ```
+
+This runs: `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all -- --check`, `cargo test --workspace`, and `bun run lint` (Biome).
 
 ## Version bumps
 

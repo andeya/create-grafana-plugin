@@ -64,5 +64,8 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Resolve root package.json with Bun
+      - name: Install dependencies
         run: bun install
+
+      - name: Lint TS/JS (Biome)
+        run: bun run lint

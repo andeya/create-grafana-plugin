@@ -1,8 +1,5 @@
 # @managed by create-grafana-plugin — do not edit
 node_modules/
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
 {%- if has_wasm %}
 
 /target/

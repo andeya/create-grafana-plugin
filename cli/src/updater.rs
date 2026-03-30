@@ -286,8 +286,12 @@ fn discover_project_config(project_dir: &Path) -> Result<ProjectConfig> {
 
     let has_wasm = project_dir.join("Cargo.toml").exists();
     let has_docker = project_dir.join("docker-compose.yml").exists();
-    // Align with scaffold: mock templates ship only with Docker: ignore orphan `otel-mock/`.
     let has_mock = has_docker && project_dir.join("otel-mock").is_dir();
+    let port_offset = if has_docker {
+        infer_port_offset(project_dir)
+    } else {
+        0
+    };
 
     Ok(ProjectConfig {
         name: config::to_kebab_case(name),
@@ -298,8 +302,45 @@ fn discover_project_config(project_dir: &Path) -> Result<ProjectConfig> {
         has_wasm,
         has_docker,
         has_mock,
-        port_offset: 0,
+        port_offset,
     })
+}
+
+/// Infer `port_offset` from the Grafana host port in `docker-compose.yml`.
+///
+/// Looks for a host:container port pair where container port is 3000 (Grafana default),
+/// then derives offset = `host_port` - 3000.  Returns 0 on any parse failure.
+fn infer_port_offset(project_dir: &Path) -> u16 {
+    let compose_path = project_dir.join("docker-compose.yml");
+    let Ok(raw) = fs::read_to_string(&compose_path) else {
+        return 0;
+    };
+    // Simple regex-free scan: find `"<host>:3000"` pattern after `grafana:` service.
+    let mut in_grafana = false;
+    for line in raw.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("grafana:") {
+            in_grafana = true;
+            continue;
+        }
+        if in_grafana && !trimmed.is_empty() && !trimmed.starts_with('-') && !trimmed.starts_with('#') && !line.starts_with(' ') && !line.starts_with('\t') {
+            break;
+        }
+        if in_grafana {
+            // Match `- "XXXX:3000"` or `- 'XXXX:3000'`
+            let stripped = trimmed
+                .trim_start_matches('-')
+                .trim()
+                .trim_matches('"')
+                .trim_matches('\'');
+            if let Some(host_str) = stripped.strip_suffix(":3000")
+                && let Ok(host_port) = host_str.parse::<u16>()
+            {
+                return host_port.saturating_sub(3000);
+            }
+        }
+    }
+    0
 }
 
 #[cfg(test)]
