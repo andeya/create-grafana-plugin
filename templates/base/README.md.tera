@@ -9,9 +9,10 @@
 ## Getting started
 
 ```bash
-bun install
 {%- if has_wasm %}
-bun run build:wasm
+bun run setup
+{%- else %}
+bun install
 {%- endif %}
 bun run dev
 ```
@@ -39,17 +40,26 @@ Open Grafana at `http://localhost:{{ 3000 + port_offset }}` (port offset: {{ por
 
 | Command | Description |
 | --- | --- |
+{%- if has_wasm %}
+| `bun run setup` | Install Rust toolchain + deps + build WASM |
+| `bun run dev` | Build WASM, then Rspack watch + cargo watch in parallel |
+| `bun run dev:ts` | Rspack watch mode (TypeScript only) |
+| `bun run dev:rust` | cargo watch for WASM crate |
+| `bun run build` | Production build (WASM + TypeScript) |
+| `bun run build:wasm` | Build Rust → WASM via wasm-pack |
+| `bun run test` | Run TypeScript + Rust tests |
+| `bun run lint` | Biome check + cargo clippy + cargo fmt |
+| `bun run lint:fix` | Auto-fix Biome + cargo fmt + clippy |
+| `bun run format` | Format TypeScript (Biome) + Rust (cargo fmt) |
+{%- else %}
 | `bun run dev` | Rspack watch mode |
-| `bun run build` | Production build{% if has_wasm %} (TypeScript + WASM){% endif %} |
+| `bun run build` | Production build |
 | `bun run test` | Run tests with Bun |
 | `bun run lint` | Check code with Biome |
 | `bun run lint:fix` | Auto-fix with Biome |
 | `bun run format` | Format with Biome |
-| `bun run verify` | Lint + test + build |
-{%- if has_wasm %}
-| `bun run build:wasm` | Build Rust → WASM via wasm-pack |
-| `bun run setup` | Install deps + build WASM |
 {%- endif %}
+| `bun run verify` | Lint + test + build |
 | `bun run bump:patch` | Bump patch version |
 
 ## Build
@@ -60,14 +70,8 @@ bun run build
 
 The packaged plugin is emitted to `dist/{{ plugin_id }}/`.
 {%- if has_wasm %}
-
-### WASM
-
-The Rust crate compiles to WASM via wasm-pack. The TypeScript bridge at `src/services/wasm-bridge.ts` loads the module synchronously.
-
-```bash
-bun run build:wasm
-```
+This command builds both the Rust WASM crate (via wasm-pack) and the TypeScript frontend (via Rspack).
+The TypeScript bridge at `src/services/wasm-bridge.ts` loads the WASM module.
 {%- endif %}
 {%- if has_docker %}
 
