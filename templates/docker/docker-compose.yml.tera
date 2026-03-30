@@ -16,6 +16,8 @@ services:
       - ./dist/{{ plugin_id }}:/var/lib/grafana/plugins/{{ plugin_id }}
       - ./provisioning:/etc/grafana/provisioning
       - grafana-data:/var/lib/grafana
+    networks:
+      - {{ plugin_name }}-net
     depends_on:
       - prometheus
       - tempo
@@ -35,6 +37,8 @@ services:
       RUST_LOG: info
     ports:
       - "9464:9464"
+    networks:
+      - {{ plugin_name }}-net
     depends_on:
       - tempo
       - loki
@@ -49,6 +53,8 @@ services:
     volumes:
       - ./provisioning/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
+    networks:
+      - {{ plugin_name }}-net
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --web.enable-remote-write-receiver
@@ -64,6 +70,8 @@ services:
     volumes:
       - ./provisioning/tempo/tempo.yml:/etc/tempo/tempo.yml
       - tempo-data:/var/lib/tempo
+    networks:
+      - {{ plugin_name }}-net
     command:
       - -config.file=/etc/tempo/tempo.yml
 
@@ -76,8 +84,15 @@ services:
     volumes:
       - ./provisioning/loki/config.yml:/etc/loki/local-config.yaml
       - loki-data:/loki
+    networks:
+      - {{ plugin_name }}-net
     command:
       - -config.file=/etc/loki/local-config.yaml
+
+networks:
+  {{ plugin_name }}-net:
+    name: {{ plugin_name }}-net
+    driver: bridge
 
 volumes:
   grafana-data:
