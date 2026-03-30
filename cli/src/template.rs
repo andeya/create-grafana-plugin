@@ -1,66 +1,37 @@
 //! Template discovery, rendering, and [`TemplateContext`] for scaffold and update flows.
+//!
+//! Templates are embedded into the binary at compile time via [`include_dir`].
 
 use anyhow::{Context, Result};
+use include_dir::{Dir, DirEntry, include_dir};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tera::Tera;
-use walkdir::WalkDir;
 
 use crate::config::ProjectConfig;
 
-/// Resolve the `templates/` directory next to the binary or from the workspace (dev).
+/// All template files under `templates/`, baked into the binary at compile time.
+static TEMPLATES: Dir = include_dir!("$CARGO_MANIFEST_DIR/../templates");
+
+/// Render embedded template content to bytes.
+///
+/// If `rel_path` ends with `.tera`, the content is rendered through Tera; otherwise it is
+/// returned verbatim.  Binary files (images, fonts) are always returned as-is.
 ///
 /// # Errors
 ///
-/// Returns an error when no templates directory can be located.
-pub fn templates_root() -> Result<PathBuf> {
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(Path::to_path_buf));
-
-    if let Some(ref dir) = exe_dir {
-        let candidate = dir.join("templates");
-        if candidate.exists() {
-            return Ok(candidate);
-        }
-        if let Some(c) = dir
-            .parent()
-            .and_then(|p| p.parent())
-            .map(|p| p.join("templates"))
-            && c.exists()
-        {
-            return Ok(c);
-        }
-    }
-
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let workspace_root = Path::new(manifest_dir)
-        .parent()
-        .unwrap_or_else(|| Path::new("."));
-    let candidate = workspace_root.join("templates");
-    if candidate.exists() {
-        return Ok(candidate);
-    }
-
-    anyhow::bail!("Could not find templates directory")
-}
-
-/// Render a template file to bytes (same rules as [`render_file`] but without writing).
-///
-/// # Errors
-///
-/// Returns an error when the template cannot be read or rendered.
-pub fn render_template_to_bytes(
-    src: &Path,
+/// Returns an error when the template fails to render.
+pub fn render_to_bytes(
+    contents: &[u8],
     rel_path: &Path,
     context: &TemplateContext,
 ) -> Result<Vec<u8>> {
-    if is_binary_file(src) || rel_path.extension().and_then(|e| e.to_str()) != Some("tera") {
-        std::fs::read(src).with_context(|| format!("Failed to read file: {}", src.display()))
+    if is_binary_path(rel_path) || rel_path.extension().and_then(|e| e.to_str()) != Some("tera") {
+        Ok(contents.to_vec())
     } else {
-        let template_body = std::fs::read_to_string(src)
-            .with_context(|| format!("Failed to read template: {}", src.display()))?;
-        let rendered = render_string(&template_body, context)?;
+        let template_body =
+            std::str::from_utf8(contents).context("Template file is not valid UTF-8")?;
+        let rendered = render_string(template_body, context)?;
         Ok(rendered.into_bytes())
     }
 }
@@ -146,31 +117,43 @@ impl TemplateContext {
     }
 }
 
-/// Known binary file extensions that should be copied without template rendering
+/// Known binary file extensions that should be copied without template rendering.
 const BINARY_EXTENSIONS: &[&str] = &[
     "svg", "png", "jpg", "jpeg", "gif", "ico", "woff", "woff2", "ttf", "eot",
 ];
 
-/// Check if a file should be treated as binary
-fn is_binary_file(path: &Path) -> bool {
+/// Check if a path has a binary extension.
+fn is_binary_path(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
         .is_some_and(|ext| BINARY_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
 }
 
-/// Collect template files from specified directories under `templates_root`
-pub fn collect_template_dirs(templates_root: &Path, dirs: &[&str]) -> Vec<(PathBuf, PathBuf)> {
+/// Recursively collect all files from an embedded [`Dir`].
+fn walk_embedded_dir(dir: &'static Dir<'static>) -> Vec<&'static include_dir::File<'static>> {
+    let mut out = Vec::new();
+    for entry in dir.entries() {
+        match entry {
+            DirEntry::Dir(d) => out.extend(walk_embedded_dir(d)),
+            DirEntry::File(f) => out.push(f),
+        }
+    }
+    out
+}
+
+/// Collect embedded template files for the given directory stack (e.g. `["base", "panel", "wasm"]`).
+///
+/// Returns `(file_contents, relative_path)` pairs where the relative path is within each
+/// sub-directory (e.g. `src/module.ts.tera`, not `panel/src/module.ts.tera`).
+pub fn collect_template_files(dirs: &[&str]) -> Vec<(&'static [u8], PathBuf)> {
     let mut files = Vec::new();
     for dir_name in dirs {
-        let dir = templates_root.join(dir_name);
-        if !dir.exists() {
+        let Some(dir) = TEMPLATES.get_dir(dir_name) else {
             continue;
-        }
-        for entry in WalkDir::new(&dir).into_iter().filter_map(Result::ok) {
-            if entry.file_type().is_file() {
-                let rel = entry.path().strip_prefix(&dir).unwrap_or(entry.path());
-                files.push((entry.path().to_path_buf(), rel.to_path_buf()));
-            }
+        };
+        for file in walk_embedded_dir(dir) {
+            let rel = file.path().strip_prefix(dir_name).unwrap_or(file.path());
+            files.push((file.contents(), rel.to_path_buf()));
         }
     }
     files
@@ -191,18 +174,19 @@ pub fn render_string(template: &str, context: &TemplateContext) -> Result<String
         .context("Failed to render template")
 }
 
-/// Render a template file, stripping the `.tera` extension from output path.
+/// Render embedded template content and write the result to `output_dir`.
+///
+/// The `.tera` suffix is stripped from `rel_path` in the output.
 ///
 /// # Errors
 ///
-/// Returns an error when templates cannot be read or written.
-pub fn render_file(
-    src: &Path,
-    output_dir: &Path,
+/// Returns an error when the template fails to render or I/O fails.
+pub fn write_rendered(
+    contents: &[u8],
     rel_path: &Path,
+    output_dir: &Path,
     context: &TemplateContext,
 ) -> Result<PathBuf> {
-    // Strip .tera extension from output path
     let out_rel = if rel_path.extension().and_then(|e| e.to_str()) == Some("tera") {
         rel_path.with_extension("")
     } else {
@@ -211,24 +195,14 @@ pub fn render_file(
 
     let dest = output_dir.join(&out_rel);
 
-    // Create parent directory
     if let Some(parent) = dest.parent() {
         std::fs::create_dir_all(parent)
             .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
     }
 
-    if is_binary_file(src) || (rel_path.extension().and_then(|e| e.to_str()) != Some("tera")) {
-        // Copy binary files or non-tera files as-is
-        std::fs::copy(src, &dest)
-            .with_context(|| format!("Failed to copy file: {}", src.display()))?;
-    } else {
-        // Render template
-        let template_body = std::fs::read_to_string(src)
-            .with_context(|| format!("Failed to read template: {}", src.display()))?;
-        let rendered = render_string(&template_body, context)?;
-        std::fs::write(&dest, rendered)
-            .with_context(|| format!("Failed to write file: {}", dest.display()))?;
-    }
+    let bytes = render_to_bytes(contents, rel_path, context)?;
+    std::fs::write(&dest, bytes)
+        .with_context(|| format!("Failed to write file: {}", dest.display()))?;
 
     Ok(dest)
 }
