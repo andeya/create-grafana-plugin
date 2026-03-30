@@ -3,6 +3,7 @@
 import { initializeWasm } from './services/wasm-bridge';
 
 initializeWasm();
+
 {%- endif %}
 import { PanelPlugin } from '@grafana/data';
 import { {{ pascal_case_name }}Panel } from './components/MainPanel';

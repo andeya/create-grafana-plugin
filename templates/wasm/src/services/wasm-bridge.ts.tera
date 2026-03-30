@@ -1,5 +1,5 @@
 // @managed by create-grafana-plugin — do not edit
-import { initSync, greet } from '../../{{ crate_name }}/pkg/{{ crate_name }}';
+import { greet, initSync } from '../../{{ crate_name }}/pkg/{{ crate_name }}';
 // Rspack emits .wasm as a base64 data URL (asset/inline).
 // Bun resolves the same format via bunfig.toml `loader = { ".wasm" = "dataurl" }`.
 import wasmDataUrl from '../../{{ crate_name }}/pkg/{{ crate_name }}_bg.wasm';

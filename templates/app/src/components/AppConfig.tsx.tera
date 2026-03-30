@@ -1,7 +1,7 @@
 // @managed by create-grafana-plugin — do not edit
-import React from 'react';
-import { Button } from '@grafana/ui';
 import type { AppPluginMeta, PluginConfigPageProps } from '@grafana/data';
+import { Button } from '@grafana/ui';
+import type React from 'react';
 
 interface Props extends PluginConfigPageProps<AppPluginMeta> {}
 

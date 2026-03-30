@@ -1,7 +1,7 @@
 // @managed by create-grafana-plugin — do not edit
 {%- if plugin_type == "panel" %}
-import React from 'react';
 import { PanelPlugin, type PanelProps } from '@grafana/data';
+import type React from 'react';
 
 function {{ pascal_case_name }}Panel(_props: PanelProps): React.ReactElement {
   return (
@@ -42,9 +42,8 @@ class {{ pascal_case_name }}DataSource extends DataSourceApi<
 
 export const plugin = new DataSourcePlugin({{ pascal_case_name }}DataSource);
 {%- else %}
-import React from 'react';
-import { AppPlugin } from '@grafana/data';
-import type { AppRootProps } from '@grafana/data';
+import { AppPlugin, type AppRootProps } from '@grafana/data';
+import type React from 'react';
 
 function {{ pascal_case_name }}RootPage(_props: AppRootProps): React.ReactElement {
   return (

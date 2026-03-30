@@ -3,6 +3,7 @@
 import { initializeWasm } from './services/wasm-bridge';
 
 initializeWasm();
+
 {%- endif %}
 import { AppPlugin } from '@grafana/data';
 import { AppConfig } from './components/AppConfig';

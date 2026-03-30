@@ -8,7 +8,7 @@
  *   bun run bump patch|minor|major
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -61,7 +61,7 @@ function updateJson(filePath: string, updater: (obj: Record<string, unknown>) =>
   const raw = readFileSync(filePath, 'utf8');
   const obj = JSON.parse(raw) as Record<string, unknown>;
   updater(obj);
-  writeFileSync(filePath, JSON.stringify(obj, null, 2) + '\n', 'utf8');
+  writeFileSync(filePath, `${JSON.stringify(obj, null, 2)}\n`, 'utf8');
   console.log(`  ✓ ${filePath}`);
 }
 
@@ -75,13 +75,13 @@ function updateToml(filePath: string, ver: string): void {
 console.log(`Bumping to ${version} (${today})\n`);
 
 updateJson(path.join(root, 'package.json'), (pkg) => {
-  pkg['version'] = version;
+  pkg.version = version;
 });
 
 updateJson(path.join(root, 'plugin.json'), (plugin) => {
-  const info = plugin['info'] as Record<string, unknown>;
-  info['version'] = version;
-  info['updated'] = today;
+  const info = plugin.info as Record<string, unknown>;
+  info.version = version;
+  info.updated = today;
 });
 
 {%- if has_wasm %}

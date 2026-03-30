@@ -117,9 +117,14 @@ fn format_generated_files(output_dir: &std::path::Path, has_wasm: bool) {
             .is_ok_and(|s| s.success())
     };
 
-    print!("  {} Formatting TS/JS/JSON...", "⟳".cyan().bold());
-    if run("bunx", &["@biomejs/biome", "format", "--write", "."]) {
-        println!("\r  {} Formatted TS/JS/JSON       ", "✓".green().bold());
+    print!("  {} Formatting & fixing TS/JS/JSON...", "⟳".cyan().bold());
+    let biome_ok =
+        run("bunx", &["@biomejs/biome", "check", "--write", "--unsafe", "."]);
+    if biome_ok {
+        println!(
+            "\r  {} Formatted & fixed TS/JS/JSON       ",
+            "✓".green().bold()
+        );
     } else {
         println!(
             "\r  {} TS/JS/JSON formatting skipped (bun not found)",

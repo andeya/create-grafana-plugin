@@ -1,5 +1,5 @@
 // @managed by create-grafana-plugin — do not edit
-import React from 'react';
+import type React from 'react';
 
 export const AppRootPage: React.FC = () => {
   return (

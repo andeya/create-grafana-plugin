@@ -1,7 +1,9 @@
 // @managed by create-grafana-plugin — do not edit
-import React from 'react';
 import type { PanelProps } from '@grafana/data';
-{% if has_wasm %}import { getWasmStatus } from '../services/wasm-bridge';{% endif %}
+import type React from 'react';
+{%- if has_wasm %}
+import { getWasmStatus } from '../services/wasm-bridge';
+{%- endif %}
 
 type PanelPropsEmpty = PanelProps<Record<string, never>>;
 
