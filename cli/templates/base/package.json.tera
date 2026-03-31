@@ -7,7 +7,7 @@
   "scripts": {
 {%- if has_wasm %}
     "setup": "rustup target add wasm32-unknown-unknown && cargo install wasm-pack cargo-watch && bun install && bun run build:wasm",
-    "dev": "bun run build:wasm && rspack build --watch & (cd {{ crate_name }} && cargo watch -w src -s 'wasm-pack build --target web') & wait",
+    "dev": "bun run build:wasm && rspack build --watch & (cd {{ crate_name }} && cargo watch --postpone -w src -s 'wasm-pack build --target web') & wait",
 {%- else %}
     "dev": "rspack build --watch",
 {%- endif %}
