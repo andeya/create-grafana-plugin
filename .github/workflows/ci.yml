@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint (fmt + clippy)
+    name: Lint (format + clippy)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

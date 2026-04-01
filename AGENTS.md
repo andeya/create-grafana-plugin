@@ -22,7 +22,7 @@ This file defines coding standards for AI assistants working on this project.
 bun run verify
 ```
 
-This runs: `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all -- --check`, `cargo test --workspace`, and `bun run lint` (Biome).
+This runs: `bun run lint` (Biome check + Clippy) then `bun run test` (cargo test).
 
 ## Version bumps
 
@@ -40,6 +40,6 @@ Then commit, tag `vX.Y.Z`, and push the tag to trigger the release workflow.
 - Never use `.unwrap()` in library code — use `Result` and `?`
 - Every `unsafe` has a `// SAFETY:` comment
 - `cargo clippy -- -D warnings` zero tolerance
-- `cargo fmt` before commit
+- `bun run format` before commit
 - All public items have `///` doc comments
 - Prefer `pub(crate)` over `pub` when not part of public API

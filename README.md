@@ -244,10 +244,11 @@ Templates live under `templates/` using the [Tera](https://keats.github.io/tera/
 ## Development (this repository)
 
 ```bash
-bun run fmt          # cargo fmt
-bun run lint         # clippy + Biome
+bun run format       # Biome format + cargo fmt
+bun run lint         # Biome check + clippy
+bun run lint:fix     # auto-fix lint issues
 bun run test         # cargo test --workspace
-bun run verify       # fmt + lint + test
+bun run verify       # lint + test
 ```
 
 ## Versioning

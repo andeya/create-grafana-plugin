@@ -1,6 +1,6 @@
 {
   "name": "@andeya/create-grafana-plugin-darwin-arm64",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Prebuilt create-grafana-plugin binary for macOS (Apple Silicon)",
   "license": "MIT",
   "repository": {

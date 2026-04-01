@@ -60,7 +60,7 @@
 {%- if has_wasm %}
     "format:check:rust": "cargo fmt --all -- --check",
 {%- endif %}
-    "package": "bun run build && cd dist && tar czf {{ plugin_id }}.tar.gz {{ plugin_id }}/",
+    "package": "bun run build && VER=$(grep -m1 '\"version\"' package.json | cut -d'\"' -f4) && rm -f dist/{{ plugin_id }}*.tar.gz && cd dist && tar czf {{ plugin_id }}-$VER.tar.gz {{ plugin_id }}/",
     "dev:reload": "bun run build && docker compose up -d grafana --force-recreate",
     "verify": "bun run lint && bun run test && bun run build",
     "bump": "bun scripts/bump-version.ts",

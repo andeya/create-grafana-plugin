@@ -244,10 +244,11 @@ my-plugin/
 ## 开发（本仓库）
 
 ```bash
-bun run fmt          # cargo fmt
-bun run lint         # clippy + Biome
+bun run format       # Biome 格式化 + cargo fmt
+bun run lint         # Biome 检查 + clippy
+bun run lint:fix     # 自动修复 lint 问题
 bun run test         # cargo test --workspace
-bun run verify       # fmt + lint + test
+bun run verify       # lint + test
 ```
 
 ## 版本号

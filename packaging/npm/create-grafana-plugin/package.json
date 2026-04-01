@@ -1,6 +1,6 @@
 {
   "name": "create-grafana-plugin",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "CLI tool to scaffold production-ready Grafana plugin projects (native binary via optional platform packages).",
   "license": "MIT",
   "repository": {
@@ -25,11 +25,11 @@
     "create-grafana-plugin": "bin/index.js"
   },
   "optionalDependencies": {
-    "@andeya/create-grafana-plugin-darwin-arm64": "0.2.5",
-    "@andeya/create-grafana-plugin-darwin-x64": "0.2.5",
-    "@andeya/create-grafana-plugin-linux-x64": "0.2.5",
-    "@andeya/create-grafana-plugin-linux-arm64": "0.2.5",
-    "@andeya/create-grafana-plugin-win32-x64": "0.2.5"
+    "@andeya/create-grafana-plugin-darwin-arm64": "0.2.6",
+    "@andeya/create-grafana-plugin-darwin-x64": "0.2.6",
+    "@andeya/create-grafana-plugin-linux-x64": "0.2.6",
+    "@andeya/create-grafana-plugin-linux-arm64": "0.2.6",
+    "@andeya/create-grafana-plugin-win32-x64": "0.2.6"
   },
   "publishConfig": {
     "access": "public"
