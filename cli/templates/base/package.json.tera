@@ -7,20 +7,20 @@
   "scripts": {
 {%- if has_wasm %}
     "setup": "rustup target add wasm32-unknown-unknown && cargo install wasm-pack cargo-watch && bun install && bun run build:wasm",
-    "dev": "bun run build:wasm && rspack build --watch & (cd {{ crate_name }} && cargo watch --postpone -w src -s 'wasm-pack build --target web') & wait",
+    "dev": "echo \"$(date +%H:%M:%S) [WASM] Initial build...\" && bun run build:wasm && echo \"$(date +%H:%M:%S) [DEV] Starting watchers...\" && rspack build --watch & (cd {{ crate_name }} && cargo watch --postpone -w src -s 'echo \"$(date +%H:%M:%S) [WASM] Compiling...\" && wasm-pack build --target web && echo \"$(date +%H:%M:%S) [WASM] Build done\"') & wait",
 {%- else %}
-    "dev": "rspack build --watch",
+    "dev": "echo \"$(date +%H:%M:%S) [DEV] Starting watcher...\" && rspack build --watch",
 {%- endif %}
-    "dev:ts": "rspack build --watch",
+    "dev:ts": "echo \"$(date +%H:%M:%S) [DEV:TS] Starting watcher...\" && rspack build --watch",
 {%- if has_wasm %}
-    "dev:rust": "cd {{ crate_name }} && cargo watch -w src -s 'wasm-pack build --target web'",
+    "dev:rust": "cd {{ crate_name }} && cargo watch -w src -s 'echo \"$(date +%H:%M:%S) [WASM] Compiling...\" && wasm-pack build --target web && echo \"$(date +%H:%M:%S) [WASM] Build done\"'",
     "build": "bun run build:wasm && bun run build:ts",
 {%- else %}
     "build": "bun run build:ts",
 {%- endif %}
-    "build:ts": "bun scripts/clean-plugin-dist.ts && rspack build",
+    "build:ts": "echo \"$(date +%H:%M:%S) [TS] Building...\" && bun scripts/clean-plugin-dist.ts && rspack build",
 {%- if has_wasm %}
-    "build:wasm": "cd {{ crate_name }} && wasm-pack build --target web",
+    "build:wasm": "echo \"$(date +%H:%M:%S) [WASM] Building...\" && cd {{ crate_name }} && wasm-pack build --target web && echo \"$(date +%H:%M:%S) [WASM] Build done\"",
     "test": "bun run test:ts && bun run test:rust",
 {%- else %}
     "test": "bun run test:ts",
@@ -60,9 +60,9 @@
 {%- if has_wasm %}
     "format:check:rust": "cargo fmt --all -- --check",
 {%- endif %}
-    "package": "bun run build && VER=$(grep -m1 '\"version\"' package.json | cut -d'\"' -f4) && rm -f dist/{{ plugin_id }}*.tar.gz && cd dist && tar czf {{ plugin_id }}-$VER.tar.gz {{ plugin_id }}/",
-    "dev:reload": "bun run build && docker compose up -d grafana --force-recreate",
-    "verify": "bun run lint && bun run test && bun run build",
+    "package": "echo \"$(date +%H:%M:%S) [PKG] Packaging...\" && bun run build && VER=$(grep -m1 '\"version\"' package.json | cut -d'\"' -f4) && rm -f dist/{{ plugin_id }}*.tar.gz && cd dist && tar czf {{ plugin_id }}-$VER.tar.gz {{ plugin_id }}/ && echo \"$(date +%H:%M:%S) [PKG] Done: {{ plugin_id }}-$VER.tar.gz\"",
+    "dev:reload": "echo \"$(date +%H:%M:%S) [RELOAD] Building and restarting Grafana...\" && bun run build && docker compose up -d grafana --force-recreate && echo \"$(date +%H:%M:%S) [RELOAD] Done\"",
+    "verify": "echo \"$(date +%H:%M:%S) [VERIFY] Starting...\" && bun run lint && bun run test && bun run build && echo \"$(date +%H:%M:%S) [VERIFY] All checks passed\"",
     "bump": "bun scripts/bump-version.ts",
     "bump:patch": "bun scripts/bump-version.ts patch",
     "bump:minor": "bun scripts/bump-version.ts minor",

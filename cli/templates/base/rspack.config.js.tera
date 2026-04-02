@@ -78,6 +78,23 @@ export default {
         { from: 'src/img', to: 'img', noErrorOnMissing: true },
       ],
     }),
+    {
+      apply(compiler) {
+        const tag = '[TS]';
+        const ts = () => new Date().toLocaleTimeString('en-GB', { hour12: false });
+        compiler.hooks.watchRun.tap('DevTimestamp', () => {
+          console.log(`${ts()} ${tag} Compiling...`);
+        });
+        compiler.hooks.done.tap('DevTimestamp', (stats) => {
+          const info = stats.toJson({ errors: true, warnings: true, timings: true });
+          const ms = info.time ?? 0;
+          const errs = info.errors?.length ?? 0;
+          const warns = info.warnings?.length ?? 0;
+          const status = errs > 0 ? `\x1b[31m${errs} error(s)\x1b[0m` : '\x1b[32mOK\x1b[0m';
+          console.log(`${ts()} ${tag} Compiled in ${ms}ms — ${status}${warns > 0 ? `, ${warns} warning(s)` : ''}`);
+        });
+      },
+    },
   ],
   optimization: {
     minimize: true,
